@@ -45,4 +45,7 @@
 
 ### Reporte final
 
-Ver la sección de abajo, que se completa al abrir el PR.
+- **PR**: https://github.com/sarabiaproject/universe/pull/1 ("Slice 0: visor", \`slice-0-viewer\` → \`main\`). Sin merge, sin push a \`main\`, sin deploy a producción, sin comandos \`vercel\`.
+- **Checks**: typecheck, lint, 23 tests unitarios, build y 3 tests de Playwright en verde (ver [checks.md](checks.md)).
+- **Capturas**: \`docs/screenshots/desktop-light.png\`, \`desktop-dark.png\`, \`mobile.png\`.
+- **Siguiente paso**: revisar el preview de Vercel del PR y arrancar slice 1 (edición + localStorage).
