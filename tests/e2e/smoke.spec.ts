@@ -1,6 +1,7 @@
 import { expect, test, type Page } from "@playwright/test";
 
-const SHOTS = "docs/screenshots";
+// Versioned screenshots are only rewritten on purpose: `UPDATE_SCREENSHOTS=1 pnpm test:e2e`.
+const SHOTS = process.env.UPDATE_SCREENSHOTS === "1" ? "docs/screenshots" : "test-results/screenshots";
 
 async function noHorizontalOverflow(page: Page) {
   const { scrollWidth, clientWidth } = await page.evaluate(() => ({
@@ -77,9 +78,48 @@ test.describe("desktop", () => {
     await page.getByTestId("map-picker").click();
     await page.getByRole("option", { name: "Share modal" }).click();
     await expect(page.getByTestId("map-header")).toContainText("Share modal · 9 nodos");
-    await expect(page.getByTestId("detail-title")).toHaveText("Default - only you");
+    await expect(page.getByTestId("detail-title")).toHaveText("Por defecto: solo tú");
     await page.getByTestId("nav-next").click();
-    await expect(page.getByTestId("detail-title")).toHaveText("Email entered");
+    await expect(page.getByTestId("detail-title")).toHaveText("Email escrito");
+  });
+
+  test("keyboard: header controls first, visible node focus, Enter/Space select", async ({ page }) => {
+    await page.goto("/");
+    await settle(page);
+
+    // Tab order: skip link, map picker and theme come before the canvas nodes.
+    await page.keyboard.press("Tab");
+    await expect(page.getByRole("link", { name: "Saltar al detalle" })).toBeFocused();
+    await page.keyboard.press("Tab");
+    await expect(page.getByTestId("map-picker")).toBeFocused();
+    await page.keyboard.press("Tab");
+    await expect(page.getByRole("radio", { name: "Modo claro" })).toBeFocused();
+    await page.keyboard.press("Tab");
+
+    const first = page.locator('.react-flow__node[data-id="problema"]');
+    await expect(first).toBeFocused();
+    await expect(first).toHaveAttribute("aria-label", "Problema, 1/9 · camino principal");
+    const outline = await first.evaluate((el) => getComputedStyle(el).outlineStyle);
+    expect(outline).not.toBe("none");
+    await page.screenshot({ path: `${SHOTS}/desktop-keyboard-focus.png` });
+
+    // Enter and Space select the focused node.
+    await page.keyboard.press("Tab");
+    await page.keyboard.press("Enter");
+    const title = page.getByTestId("detail-title");
+    await expect(title).toHaveText("Mapa universal");
+    await expect(page.getByTestId("selection-announcer")).toHaveText("Mapa universal, 2/9 · camino principal");
+    await page.keyboard.press("Tab");
+    await page.keyboard.press(" ");
+    await expect(title).not.toHaveText("Mapa universal");
+
+    // The skip link jumps over the nodes to the detail.
+    await page.getByRole("link", { name: "Saltar al detalle" }).focus();
+    await page.keyboard.press("Enter");
+    await expect(page.getByTestId("detail-panel")).toBeFocused();
+
+    // Zoom slider thumb has an accessible name.
+    await expect(page.getByRole("slider", { name: "Zoom" })).toBeVisible();
   });
 });
 
@@ -98,9 +138,34 @@ test.describe("mobile", () => {
     await noHorizontalOverflow(page);
     await page.screenshot({ path: `${SHOTS}/mobile.png` });
 
+    // Touch targets in the mobile chrome are at least 40px tall.
+    for (const target of [
+      page.getByRole("button", { name: "Alejar" }),
+      page.getByRole("button", { name: "Acercar" }),
+      page.getByRole("button", { name: "Ajustar" }),
+      page.getByRole("radio", { name: "Modo claro" }),
+      page.getByTestId("map-picker"),
+      page.getByTestId("nav-prev"),
+      page.getByTestId("nav-next"),
+      page.getByRole("button", { name: "Detalle" }),
+    ]) {
+      const box = await target.boundingBox();
+      expect(box?.height ?? 0).toBeGreaterThanOrEqual(40);
+    }
+
     await page.getByRole("button", { name: "Detalle" }).click();
     const sheet = page.getByRole("dialog");
     await expect(sheet.getByTestId("detail-title")).toHaveText("Mapa universal");
     await noHorizontalOverflow(page);
+
+    // The close button is in Spanish and does not cover the kind badge.
+    const close = sheet.getByRole("button", { name: "Cerrar" });
+    await expect(close).toBeVisible();
+    const closeBox = await close.boundingBox();
+    const badgeBox = await sheet.getByText("Camino principal", { exact: true }).boundingBox();
+    expect(closeBox && badgeBox).toBeTruthy();
+    if (closeBox && badgeBox) expect(badgeBox.x + badgeBox.width).toBeLessThanOrEqual(closeBox.x);
+    await page.waitForTimeout(400); // Sheet slide-in
+    await page.screenshot({ path: `${SHOTS}/mobile-sheet.png` });
   });
 });
