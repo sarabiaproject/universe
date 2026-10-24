@@ -9,3 +9,6 @@ Antes de aprobar un PR:
 - [ ] Componentes de UI desde shadcn/ui (y React Flow UI para el canvas); nada de IA/LLM.
 - [ ] Copy de la interfaz en español.
 - [ ] `pnpm build`, `pnpm lint`, `pnpm test` y `pnpm test:e2e` en verde, registrados en `docs/checks.md`.
+- [ ] **Foco visible y teclado**: todo lo enfocable muestra un indicador de foco (nunca `outline: none` sin reemplazo) y se activa con Enter/Espacio; los controles del encabezado van antes del canvas en el orden de tabulación (o hay "Saltar al detalle"); cada control tiene nombre accesible (también los `role="slider"`). Lo verifica el e2e de teclado.
+- [ ] **Copy en español también fuera del chrome visible**: textos `sr-only` y `aria-label` de componentes generados (shadcn, React Flow `ariaLabelConfig`) y títulos de los mapas de ejemplo. Comprobación rápida: `grep -rnE 'sr-only|aria-label|ariaLabel|"title"' src` y revisar que todo esté en español.
+- [ ] **Los tests no ensucian el árbol**: tras `pnpm test` y `pnpm test:e2e`, `git status --short` sale vacío. Las capturas van a `test-results/`; `docs/screenshots/` solo se regenera a propósito con `UPDATE_SCREENSHOTS=1 pnpm test:e2e`.

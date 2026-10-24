@@ -49,3 +49,29 @@
 - **Checks**: typecheck, lint, 23 tests unitarios, build y 3 tests de Playwright en verde (ver [checks.md](checks.md)).
 - **Capturas**: `docs/screenshots/desktop-light.png`, `desktop-dark.png`, `mobile.png`.
 - **Siguiente paso**: revisar el preview de Vercel del PR y arrancar slice 1 (edición + localStorage).
+
+## 2026-10-23: Slice 0, revisión ronda 1 (rama `slice-0-viewer`)
+
+Revisión independiente en `~/dev/universe-review/REVIEW-round-1.md`: cambios requeridos (menores), un bloqueante.
+
+### Qué se arregló
+
+- **B1 (bloqueante), opción (b)**: los nodos siguen siendo enfocables, ahora con anillo visible (`outline` de 2 px con `--foreground` en lugar de `outline: none`). Enter y Espacio seleccionan el nodo enfocado. Cada nodo tiene `aria-label` "título, posición". Las descripciones de React Flow (`ariaLabelConfig`) están en español. Los controles del encabezado van antes del canvas en el DOM y hay un enlace "Saltar al detalle" (primera parada de Tab) que lleva el foco al panel o, en móvil, a la barra inferior.
+- **D1**: `NodeDetail` acepta `inSheet` y deja `pr-10` en la fila del badge; la X ya no lo tapa.
+- **D2**: "Close" → "Cerrar" en el Sheet; títulos del mapa Share modal en español ("Por defecto: solo tú", "Email escrito", …); e2e actualizado. El título del mapa ("Share modal") se mantiene: es el nombre del ejemplo.
+- **D3**: el e2e guarda capturas en `test-results/screenshots/`; `docs/screenshots/` solo con `UPDATE_SCREENSHOTS=1`. Tras todos los checks `git status` queda limpio.
+- **D4**: `superRefine` exige un camino principal de una sola cadena (aristas `main` solo entre nodos `main`, ≤ 1 entrante y ≤ 1 saliente, un inicio que alcanza a todos), rechaza auto-lazos y usa `.trim().min(1)` en ids. 9 tests nuevos y regla documentada en el README.
+- **D5**: fuera `aria-live` del `<article>`; una región `sr-only` anuncia solo "título, posición".
+- **D6**: el `Slider` acepta `thumbLabel` y el thumb del zoom se llama "Zoom".
+- **Opcionales**: O4 (README: `details?`), O6 (contextos de nodo en un `useMemo([map])`, salió gratis con los `aria-label`), O10 (áreas táctiles móviles ≥ 40 px, verificado en el e2e), O11 (`shadcn` en `devDependencies`). El resto (O1, O2, O3, O5, O7, O8, O9, O12) queda en `docs/roadmap.md` para el slice 1.
+- **REVIEW.md**: tres checks nuevos, uno por clase de error: foco visible y teclado, copy en español fuera del chrome visible (`sr-only`, `aria-label`, mapas de ejemplo) y tests que no ensucian el árbol.
+
+### Decisiones
+
+- Anillo de foco con `--foreground` y no con `--ring`: el gris de `--ring` sobre fondo claro queda por debajo de 3:1. El acento (`--highlight`) se reserva para la selección.
+- Enter/Espacio se manejan con un `onKeyDown` en el contenedor del canvas (filtrando `.react-flow__node`) en lugar de activar `elementsSelectable`, para no meter el estado de selección de React Flow junto al del store.
+
+### Checks
+
+`pnpm install --frozen-lockfile`, `typecheck`, `lint`, `test` (32/32), `build` y `test:e2e` (4/4) en verde desde un árbol limpio; grep de colores vacío; `git status` limpio tras los tests. Detalle en [checks.md](checks.md).
+
