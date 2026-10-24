@@ -28,7 +28,7 @@ export function NavButtons({ ctx, compact = false }: { ctx: NodeContext; compact
         data-testid="nav-prev"
         variant="outline"
         size={compact ? "sm" : "default"}
-        className={cn("h-auto min-w-0 flex-col items-start gap-0.5 py-1.5", compact && "py-1")}
+        className={cn("h-auto min-w-0 flex-col items-start gap-0.5 py-1.5", compact && "min-h-10 justify-center py-1")}
         disabled={!ctx.prev}
         onClick={() => go(ctx.prev)}
       >
@@ -41,7 +41,7 @@ export function NavButtons({ ctx, compact = false }: { ctx: NodeContext; compact
         data-testid="nav-next"
         variant="outline"
         size={compact ? "sm" : "default"}
-        className={cn("h-auto min-w-0 flex-col items-end gap-0.5 py-1.5", compact && "py-1")}
+        className={cn("h-auto min-w-0 flex-col items-end gap-0.5 py-1.5", compact && "min-h-10 justify-center py-1")}
         disabled={!ctx.next}
         onClick={() => go(ctx.next)}
       >
@@ -54,15 +54,24 @@ export function NavButtons({ ctx, compact = false }: { ctx: NodeContext; compact
   );
 }
 
-export function NodeDetail({ map, ctx }: { map: SystemMap; ctx: NodeContext }) {
+export function NodeDetail({
+  map,
+  ctx,
+  inSheet = false,
+}: {
+  map: SystemMap;
+  ctx: NodeContext;
+  /** Inside the mobile Sheet: leave room for its close button. */
+  inSheet?: boolean;
+}) {
   const select = useMapStore((s) => s.select);
   const byId = new Map(map.nodes.map((n) => [n.id, n]));
   const { node } = ctx;
 
   return (
-    <article className="flex flex-col gap-5 p-5" aria-live="polite">
+    <article className="flex flex-col gap-5 p-5">
       <header className="flex flex-col gap-2">
-        <div className="flex items-center justify-between gap-2">
+        <div className={cn("flex items-center justify-between gap-2", inSheet && "pr-10")}>
           <span data-testid="detail-position" className="truncate font-mono text-[11px] text-muted-foreground">
             {positionLabel(ctx)}
           </span>

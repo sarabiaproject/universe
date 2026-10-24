@@ -6,13 +6,14 @@ import {
   MarkerType,
   ReactFlow,
   useReactFlow,
+  type AriaLabelConfig,
   type Edge,
   type NodeMouseHandler,
 } from "@xyflow/react";
 import { useCallback, useEffect, useMemo, useRef } from "react";
 
 import { ZoomSlider } from "@/components/zoom-slider";
-import { getMainPath, getNodeContext } from "@/lib/graph";
+import { getMainPath, getNodeContext, positionLabel } from "@/lib/graph";
 import { layoutMap, NODE_HEIGHT, NODE_WIDTH } from "@/lib/layout";
 import type { EdgeType, SystemMap } from "@/lib/schema";
 import { useMapStore } from "@/store/map-store";
@@ -22,6 +23,13 @@ import { MapNode, type MapFlowNode } from "./map-node";
 const nodeTypes = { map: MapNode };
 
 const NARROW_WIDTH = 640;
+
+// Nodes stay focusable; Enter/Space select them (see onKeyDown below).
+const ARIA_LABELS: Partial<AriaLabelConfig> = {
+  "node.a11yDescription.default": "Pulsa Enter o Espacio para ver el nodo en el detalle.",
+  "node.a11yDescription.keyboardDisabled": "Pulsa Enter o Espacio para ver el nodo en el detalle.",
+  "handle.ariaLabel": "Conector",
+};
 
 const EDGE_STYLE: Record<EdgeType, React.CSSProperties> = {
   main: {},
@@ -60,6 +68,12 @@ export function MapCanvas({
     [mainPath],
   );
 
+  // Kind and position label only depend on the map, not on the selection.
+  const contexts = useMemo(
+    () => new Map(map.nodes.map((n) => [n.id, getNodeContext(map, n.id)])),
+    [map],
+  );
+
   const related = useMemo(() => {
     const ids = new Set<string>();
     for (const e of map.edges) {
@@ -71,20 +85,24 @@ export function MapCanvas({
 
   const nodes = useMemo<MapFlowNode[]>(
     () =>
-      map.nodes.map((node) => ({
-        id: node.id,
-        type: "map",
-        position: positions[node.id],
-        selected: node.id === selectedId,
-        width: NODE_WIDTH,
-        height: NODE_HEIGHT,
-        data: {
-          node,
-          kind: getNodeContext(map, node.id)?.kind ?? "branch",
-          related: related.has(node.id),
-        },
-      })),
-    [map, positions, selectedId, related],
+      map.nodes.map((node) => {
+        const ctx = contexts.get(node.id);
+        return {
+          id: node.id,
+          type: "map",
+          ariaLabel: ctx ? `${node.title}, ${positionLabel(ctx)}` : node.title,
+          position: positions[node.id],
+          selected: node.id === selectedId,
+          width: NODE_WIDTH,
+          height: NODE_HEIGHT,
+          data: {
+            node,
+            kind: ctx?.kind ?? "branch",
+            related: related.has(node.id),
+          },
+        };
+      }),
+    [contexts, map, positions, selectedId, related],
   );
 
   const edges = useMemo<Edge[]>(
@@ -122,6 +140,20 @@ export function MapCanvas({
 
   const onNodeClick = useCallback<NodeMouseHandler<MapFlowNode>>(
     (_, node) => select(node.id),
+    [select],
+  );
+
+  // Keyboard: Enter/Space on a focused node selects it, like a click.
+  const onKeyDown = useCallback(
+    (event: React.KeyboardEvent<HTMLDivElement>) => {
+      if (event.key !== "Enter" && event.key !== " ") return;
+      const el = event.target as HTMLElement;
+      if (!el.classList.contains("react-flow__node")) return;
+      const id = el.dataset.id;
+      if (!id) return;
+      event.preventDefault();
+      select(id);
+    },
     [select],
   );
 
@@ -179,7 +211,7 @@ export function MapCanvas({
   }, []);
 
   return (
-    <div ref={containerRef} className="h-full w-full">
+    <div ref={containerRef} className="h-full w-full" onKeyDown={onKeyDown}>
       <ReactFlow
         nodes={nodes}
         edges={edges}
@@ -195,6 +227,7 @@ export function MapCanvas({
         minZoom={0.1}
         maxZoom={2}
         aria-label="Mapa del sistema"
+        ariaLabelConfig={ARIA_LABELS}
       >
         <Background
           variant={BackgroundVariant.Dots}

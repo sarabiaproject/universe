@@ -24,10 +24,10 @@ export function ThemeToggle() {
       data-testid="theme-toggle"
       className="bg-background"
     >
-      <ToggleGroupItem value="light" aria-label="Modo claro">
+      <ToggleGroupItem value="light" aria-label="Modo claro" className="max-md:h-10 max-md:min-w-10">
         <Sun />
       </ToggleGroupItem>
-      <ToggleGroupItem value="dark" aria-label="Modo oscuro">
+      <ToggleGroupItem value="dark" aria-label="Modo oscuro" className="max-md:h-10 max-md:min-w-10">
         <Moon />
       </ToggleGroupItem>
     </ToggleGroup>

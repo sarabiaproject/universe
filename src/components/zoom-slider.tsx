@@ -47,6 +47,7 @@ export function ZoomSlider({
           <Button
             variant="ghost"
             size="icon-sm"
+            className="max-md:size-10"
             aria-label="Alejar"
             onClick={() => zoomOut({ duration: 200 })}
           >
@@ -57,7 +58,7 @@ export function ZoomSlider({
       </Tooltip>
       <Slider
         className="hidden w-24 sm:flex"
-        aria-label="Zoom"
+        thumbLabel="Zoom"
         value={[zoom]}
         min={minZoom}
         max={maxZoom}
@@ -69,6 +70,7 @@ export function ZoomSlider({
           <Button
             variant="ghost"
             size="icon-sm"
+            className="max-md:size-10"
             aria-label="Acercar"
             onClick={() => zoomIn({ duration: 200 })}
           >
@@ -81,7 +83,7 @@ export function ZoomSlider({
         <TooltipTrigger asChild>
           <Button
             data-testid="zoom-readout"
-            className="w-12 font-mono text-xs tabular-nums"
+            className="w-12 font-mono text-xs tabular-nums max-md:h-10"
             variant="ghost"
             size="sm"
             onClick={() => zoomTo(1, { duration: 200 })}
@@ -91,7 +93,7 @@ export function ZoomSlider({
         </TooltipTrigger>
         <TooltipContent>Volver a 100%</TooltipContent>
       </Tooltip>
-      <Button variant="ghost" size="sm" className="text-xs" onClick={onFit}>
+      <Button variant="ghost" size="sm" className="text-xs max-md:h-10" onClick={onFit}>
         Ajustar
       </Button>
     </Panel>

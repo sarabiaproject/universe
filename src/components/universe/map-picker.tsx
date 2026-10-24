@@ -15,7 +15,7 @@ export function MapPicker() {
   const setMap = useMapStore((s) => s.setMap);
   return (
     <Select value={mapId} onValueChange={setMap}>
-      <SelectTrigger size="sm" className="w-40 bg-background sm:w-44" aria-label="Mapa" data-testid="map-picker">
+      <SelectTrigger size="sm" className="w-40 bg-background max-md:data-[size=sm]:h-10 sm:w-44" aria-label="Mapa" data-testid="map-picker">
         <SelectValue />
       </SelectTrigger>
       <SelectContent position="popper" align="end">

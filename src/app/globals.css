@@ -145,8 +145,11 @@
 .react-flow {
   --xy-background-color: var(--background);
 }
+/* Keyboard focus on a node: visible ring around the card (WCAG 2.4.7). */
 .react-flow__node:focus-visible {
-  outline: none;
+  outline: 2px solid var(--foreground);
+  outline-offset: 3px;
+  border-radius: var(--radius-lg);
 }
 .react-flow__attribution {
   background: transparent;

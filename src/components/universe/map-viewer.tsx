@@ -30,9 +30,40 @@ import { MapPicker } from "./map-picker";
 import { NavButtons, NodeDetail } from "./node-detail";
 import { ThemeToggle } from "./theme-toggle";
 
+const DETAIL_ID = "detalle";
+
+/** Skips the canvas nodes in the tab order and lands on the node detail. */
+function SkipToDetail() {
+  return (
+    <a
+      href={`#${DETAIL_ID}`}
+      onClick={(event) => {
+        const target = document.getElementById(DETAIL_ID);
+        if (!target) return;
+        event.preventDefault();
+        target.focus();
+      }}
+      className="pointer-events-auto sr-only rounded-md border bg-background px-3 py-2 text-sm focus:not-sr-only"
+    >
+      Saltar al detalle
+    </a>
+  );
+}
+
 function CanvasArea({ map }: { map: SystemMap }) {
   return (
     <div className="relative h-full w-full overflow-hidden">
+      {/* Header controls come first in the DOM so Tab reaches them before the nodes. */}
+      <div className="pointer-events-none absolute inset-x-3 top-3 z-10 flex flex-col-reverse items-start gap-2 sm:flex-row sm:justify-between">
+        <div className="flex flex-col items-start gap-2">
+          <SkipToDetail />
+          <MapHeader map={map} />
+        </div>
+        <div className="pointer-events-auto flex items-center gap-1.5 self-end sm:self-auto">
+          <MapPicker />
+          <ThemeToggle />
+        </div>
+      </div>
       {map.nodes.length === 0 ? (
         <div className="flex h-full items-center justify-center p-6 text-center text-sm text-muted-foreground">
           Este mapa no tiene nodos todavía.
@@ -40,13 +71,6 @@ function CanvasArea({ map }: { map: SystemMap }) {
       ) : (
         <MapCanvas map={map} />
       )}
-      <div className="pointer-events-none absolute inset-x-3 top-3 z-10 flex flex-col-reverse items-start gap-2 sm:flex-row sm:justify-between">
-        <MapHeader map={map} />
-        <div className="pointer-events-auto flex items-center gap-1.5 self-end sm:self-auto">
-          <MapPicker />
-          <ThemeToggle />
-        </div>
-      </div>
     </div>
   );
 }
@@ -62,7 +86,12 @@ function EmptyDetail() {
 function MobileBar({ map, ctx }: { map: SystemMap; ctx: NodeContext }) {
   const [open, setOpen] = useState(false);
   return (
-    <div data-testid="mobile-bar" className="flex flex-col gap-2 border-t bg-background p-3">
+    <div
+      id={DETAIL_ID}
+      tabIndex={-1}
+      data-testid="mobile-bar"
+      className="flex flex-col gap-2 border-t bg-background p-3 outline-none"
+    >
       <div className="flex min-w-0 items-start justify-between gap-2">
         <div className="min-w-0">
           <p className="truncate font-mono text-[11px] text-muted-foreground">{positionLabel(ctx)}</p>
@@ -71,7 +100,7 @@ function MobileBar({ map, ctx }: { map: SystemMap; ctx: NodeContext }) {
           </p>
           <p className="line-clamp-2 text-xs text-muted-foreground">{ctx.node.summary}</p>
         </div>
-        <Button variant="outline" size="sm" className="shrink-0" onClick={() => setOpen(true)}>
+        <Button variant="outline" className="h-10 shrink-0" onClick={() => setOpen(true)}>
           <PanelBottomOpen /> Detalle
         </Button>
       </div>
@@ -83,7 +112,7 @@ function MobileBar({ map, ctx }: { map: SystemMap; ctx: NodeContext }) {
             <SheetDescription>{ctx.node.summary}</SheetDescription>
           </SheetHeader>
           <ScrollArea className="max-h-[85svh] overflow-y-auto">
-            <NodeDetail map={map} ctx={ctx} />
+            <NodeDetail map={map} ctx={ctx} inSheet />
           </ScrollArea>
         </SheetContent>
       </Sheet>
@@ -101,6 +130,10 @@ export function MapViewer() {
   return (
     <ReactFlowProvider>
       <main className="flex h-dvh w-full flex-col overflow-hidden">
+        {/* Announces only the selected node, not the whole detail. */}
+        <p className="sr-only" aria-live="polite" data-testid="selection-announcer">
+          {ctx ? `${ctx.node.title}, ${positionLabel(ctx)}` : ""}
+        </p>
         {isMobile ? (
           <>
             <div className="min-h-0 flex-1">
@@ -115,7 +148,7 @@ export function MapViewer() {
             </ResizablePanel>
             <ResizableHandle />
             <ResizablePanel defaultSize="32" minSize="22" maxSize="50">
-              <ScrollArea data-testid="detail-panel" className="h-full">
+              <ScrollArea id={DETAIL_ID} tabIndex={-1} data-testid="detail-panel" className="h-full outline-none">
                 {ctx ? <NodeDetail map={map} ctx={ctx} /> : <EmptyDetail />}
               </ScrollArea>
             </ResizablePanel>
