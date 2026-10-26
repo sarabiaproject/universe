@@ -8,6 +8,7 @@ import {
   FileUp,
   FilePlus2,
   ImageDown,
+  LayoutGrid,
   MoreHorizontal,
   Pencil,
   Plus,
@@ -55,6 +56,7 @@ import { layoutMap, NODE_HEIGHT, NODE_WIDTH } from "@/lib/layout";
 import { SystemMapDraftSchema, type EdgeType, type SystemMap } from "@/lib/schema";
 import { currentMap, isReadOnly, useMapStore } from "@/store/map-store";
 
+import { ExampleGallery } from "./example-gallery";
 import { EDGE_HINT, EDGE_LABEL } from "./labels";
 import { exportJson, exportPng, ImportDialog } from "./share-chrome";
 
@@ -168,6 +170,7 @@ export function EmptyState() {
   const editing = useMapStore((s) => s.mode === "edit");
   const setMode = useMapStore((s) => s.setMode);
   const addNode = useAddNode();
+  const [gallery, setGallery] = useState(false);
   return (
     <div className="pointer-events-none absolute inset-0 z-[5] flex items-center justify-center p-6">
       <div
@@ -192,7 +195,22 @@ export function EmptyState() {
             <Pencil /> Editar el mapa
           </Button>
         )}
+        <Button
+          variant="ghost"
+          size="sm"
+          onClick={() => setGallery(true)}
+          className="text-muted-foreground max-md:h-10"
+          data-testid="open-gallery-from-empty"
+        >
+          <LayoutGrid /> O abre un ejemplo
+        </Button>
       </div>
+      {/* Escape comes back here; after opening an example this button is gone, so to the map picker. */}
+      <ExampleGallery
+        open={gallery}
+        onOpenChange={setGallery}
+        returnFocus={['[data-testid="open-gallery-from-empty"]', '[data-testid="map-picker"]']}
+      />
     </div>
   );
 }
@@ -341,7 +359,7 @@ export function MapMenu() {
   const title = useMapStore((s) => currentMap(s).title);
   const empty = useMapStore((s) => currentMap(s).nodes.length === 0);
   const bundled = isReadOnly(mapId);
-  const [dialog, setDialog] = useState<"rename" | "delete" | "import" | null>(null);
+  const [dialog, setDialog] = useState<"rename" | "delete" | "import" | "gallery" | null>(null);
   const [name, setName] = useState("");
   const nameError = dialog === "rename" ? checkTitle(name) : null;
 
@@ -362,6 +380,9 @@ export function MapMenu() {
         <DropdownMenuContent align="end" className="w-52">
           <DropdownMenuItem onSelect={() => createMap()}>
             <FilePlus2 /> Nuevo mapa
+          </DropdownMenuItem>
+          <DropdownMenuItem onSelect={() => setDialog("gallery")}>
+            <LayoutGrid /> Ver ejemplos…
           </DropdownMenuItem>
           <DropdownMenuItem onSelect={() => duplicateMap()}>
             <Copy /> {bundled ? "Duplicar para editar" : "Duplicar"}
@@ -437,6 +458,12 @@ export function MapMenu() {
           </form>
         </DialogContent>
       </Dialog>
+
+      <ExampleGallery
+        open={dialog === "gallery"}
+        onOpenChange={(open) => setDialog(open ? "gallery" : null)}
+        returnFocus={['[data-testid="map-menu"]']}
+      />
 
       <ImportDialog open={dialog === "import"} onOpenChange={(open) => setDialog(open ? "import" : null)} />
 
