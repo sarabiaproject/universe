@@ -149,7 +149,10 @@ export const useMapStore = create<MapState>()(
       const replaceCurrent = (map: SystemMap, history: History) => {
         set((s) => {
           const selectedId = s.selectedId && map.nodes.some((n) => n.id === s.selectedId) ? s.selectedId : null;
-          const selectedEdge = s.selectedEdge !== null && map.edges[s.selectedEdge] ? s.selectedEdge : null;
+          // Edges are selected by index: follow the same from → to after the edit, or drop it.
+          const picked = s.selectedEdge !== null ? currentMap(s).edges[s.selectedEdge] : undefined;
+          const index = picked ? map.edges.findIndex((e) => e.from === picked.from && e.to === picked.to) : -1;
+          const selectedEdge = index >= 0 ? index : null;
           return {
             history,
             selectedId,

@@ -87,11 +87,15 @@ test.describe("desktop", () => {
     await page.goto("/");
     await settle(page);
 
-    // Tab order: skip link, map picker and theme come before the canvas nodes.
+    // Tab order: skip link, map picker, map menu, mode and theme come before the canvas nodes.
     await page.keyboard.press("Tab");
     await expect(page.getByRole("link", { name: "Saltar al detalle" })).toBeFocused();
     await page.keyboard.press("Tab");
     await expect(page.getByTestId("map-picker")).toBeFocused();
+    await page.keyboard.press("Tab");
+    await expect(page.getByRole("button", { name: "Acciones del mapa" })).toBeFocused();
+    await page.keyboard.press("Tab");
+    await expect(page.getByRole("radio", { name: "Ver" })).toBeFocused();
     await page.keyboard.press("Tab");
     await expect(page.getByRole("radio", { name: "Modo claro" })).toBeFocused();
     await page.keyboard.press("Tab");
@@ -116,7 +120,20 @@ test.describe("desktop", () => {
     // The skip link jumps over the nodes to the detail.
     await page.getByRole("link", { name: "Saltar al detalle" }).focus();
     await page.keyboard.press("Enter");
-    await expect(page.getByTestId("detail-panel")).toBeFocused();
+    const panel = page.getByTestId("detail-panel");
+    await expect(panel).toBeFocused();
+    // The focused element is the one that scrolls, so the keyboard scrolls the detail (O-N3).
+    await page.setViewportSize({ width: 1440, height: 480 });
+    await panel.focus();
+    expect(await panel.evaluate((el) => el.scrollHeight > el.clientHeight)).toBe(true);
+    await page.keyboard.press("PageDown");
+    await expect.poll(() => panel.evaluate((el) => el.scrollTop)).toBeGreaterThan(0);
+    await page.setViewportSize({ width: 1440, height: 900 });
+
+    // The skip link keeps its padding when it shows up (O-N1).
+    const skip = page.getByRole("link", { name: "Saltar al detalle" });
+    await skip.focus();
+    expect((await skip.boundingBox())?.height ?? 0).toBeGreaterThanOrEqual(30);
 
     // Zoom slider thumb has an accessible name.
     await expect(page.getByRole("slider", { name: "Zoom" })).toBeVisible();
@@ -165,6 +182,9 @@ test.describe("mobile", () => {
     const badgeBox = await sheet.getByText("Camino principal", { exact: true }).boundingBox();
     expect(closeBox && badgeBox).toBeTruthy();
     if (closeBox && badgeBox) expect(badgeBox.x + badgeBox.width).toBeLessThanOrEqual(closeBox.x);
+    // Connection chips are comfortable touch targets too.
+    const chip = sheet.getByTestId("connection-chip").first();
+    expect((await chip.boundingBox())?.height ?? 0).toBeGreaterThanOrEqual(40);
     await page.waitForTimeout(400); // Sheet slide-in
     await page.screenshot({ path: `${SHOTS}/mobile-sheet.png` });
   });

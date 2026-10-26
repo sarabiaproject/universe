@@ -194,11 +194,16 @@ describe("SystemMap schema", () => {
     });
 
     it("names nodes by title in main path messages", () => {
-      const map = {
-        ...valid,
-        nodes: [{ ...node("a"), title: "Inicio" }, { ...node("b"), title: "Suelto" }],
+      const map: SystemMap = {
+        version: 1,
+        title: "Mapa",
+        summary: "",
+        nodes: [
+          { ...node("a"), title: "Inicio", details: "" },
+          { ...node("b"), title: "Suelto", details: "" },
+        ],
         edges: [],
-      } as SystemMap;
+      };
       expect(mapProblems(map).join(" ")).toContain("«Suelto»");
     });
 

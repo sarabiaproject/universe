@@ -109,6 +109,22 @@ describe("map store", () => {
     expect(map().nodes[0].title).toBe("Nuevo nodo");
   });
 
+  it("the selected edge follows its endpoints across deletes and undo", () => {
+    state().createMap();
+    const a = addNode();
+    const b = addNode({ x: 300, y: 0 });
+    const c = addNode({ x: 600, y: 0 });
+    state().edit({ type: "addEdge", edge: { from: a, to: b, type: "main" } });
+    state().edit({ type: "addEdge", edge: { from: b, to: c, type: "branch" } });
+    state().selectEdge(1);
+    state().edit({ type: "deleteEdge", index: 0 });
+    expect(state().selectedEdge).toBe(0); // same b → c edge, new index
+    state().edit({ type: "deleteEdge", index: 0 });
+    expect(state().selectedEdge).toBeNull();
+    state().undo();
+    expect(state().selectedEdge).toBeNull();
+  });
+
   it("deletes nodes without edges right away", () => {
     state().createMap();
     const a = addNode();
