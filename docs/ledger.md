@@ -209,3 +209,53 @@ Desde cero: install, typecheck, lint, 120 tests unitarios, build y 20 e2e (`E2E_
 ### Reporte final
 
 - **PR**: https://github.com/sarabiaproject/universe/pull/3 ("Slice 2: compartir", `slice-2-share` → `slice-1-editor`; se retargetea a `main` cuando se mergee #2). Sin merge, sin push a `main` ni a `slice-1-editor`, sin deploy ni comandos `vercel`; no se tocaron los servicios de los puertos 3100 y 3110.
+
+## 2026-10-26: Slice 3, lanzamiento (rama `slice-3-launch`)
+
+Rama creada desde `origin/slice-2-share` (PR #3 sigue en revisión). `slice-2-share` no tuvo commits nuevos durante el trabajo, así que no hubo merge. `slice-1-editor` sí tiene 4 commits nuevos (ronda 2) que todavía no están en `slice-2-share`. Uno toca `MapMenu` en `editor-chrome.tsx` (foco tras renombrar y borrar), donde este slice suma "Ver ejemplos…": cuando lleguen habrá un conflicto chico en ese archivo.
+
+### Qué se hizo
+
+- **Ejemplos nuevos**:
+  - "Mi semana" (14 nodos): hábitos, foco, ejercicio, revisión y descanso. Los desvíos: semana cargada, me enfermo → volver sin culpa, una reunión pisa el foco, lluvia, acostarse tarde y pendientes.
+  - "Lanzar un proyecto open source" (17 nodos): problema → versión mínima → licencia → README → demo → anuncio → issues → ritmo. Los desvíos: ya existe algo parecido, el alcance crece, dependencias con otra licencia, el deploy falla, nadie responde, primer PR externo, pedido fuera de alcance y agotamiento.
+  - Los dos con explicaciones cortas en español y vistas previas de los 5 tipos.
+- **`BundledMap.description`**: una línea por ejemplo para la galería. No cambia el esquema `SystemMap`.
+- **Galería** (`example-gallery.tsx`): diálogo shadcn "Ejemplos" con una tarjeta por mapa (mini mapa en SVG con `currentColor`, título, descripción, "N nodos", badge "Abierto"). Se abre desde tres lugares:
+  - el selector de mapa, con "Ver todos los ejemplos…" al final del grupo de ejemplos;
+  - el menú `⋯`, con "Ver ejemplos…";
+  - el estado vacío, con "O abre un ejemplo".
+  Al cerrar, el foco vuelve al control que la abrió; si ya no existe, al selector.
+- **Lanzamiento**:
+  - Metadatos con `metadataBase` en la URL de producción: título con plantilla, descripción, Open Graph (`es_ES`) y Twitter `summary_large_image`.
+  - `opengraph-image.tsx` y `twitter-image.tsx` comparten `src/lib/og-image.tsx` (`next/og`, estático en el build).
+  - Favicon propio (el `.ico` de `create-next-app` reemplazado por 16/32/48 px generados desde `icon.svg`), `icon.svg` y `apple-icon.tsx`.
+  - 404 en español (`not-found.tsx`).
+- **README** de lanzamiento: pitch, URL de producción, GIF, "Qué hace", tabla de capturas, cómo correrlo y desplegar, tabla de ejemplos y cómo sumar uno. El esquema y las secciones de editar y compartir se mantienen.
+- **GIF**: `scripts/record-demo.mjs` (`pnpm demo:gif`) graba con Playwright el flujo galería → ejemplo → nodos y rama → Editar (copia) → cambiar un título → Compartir, y lo convierte con ffmpeg. Dibuja un cursor, porque el video de Playwright no lo muestra. Resultado: `docs/media/demo.gif`, 2,57 MiB, 21,5 s.
+- **Capturas**: se regeneraron todas con `UPDATE_SCREENSHOTS=1`, más 6 nuevas del slice.
+- **Tests**: 141 unitarios (antes 120) y 27 e2e (antes 20). Ver [checks.md](checks.md).
+
+### Decisiones
+
+- **La galería es un diálogo, no una pantalla nueva.** La app arranca en un ejemplo y tiene una sola ruta. Un diálogo alcanzable desde el selector, el menú y el estado vacío no cambia el flujo de los slices 1 y 2 ni su lógica (el store no se tocó). Abrir un ejemplo usa `setMap`, que ya fuerza el modo Ver en mapas de solo lectura.
+- **"Ver todos los ejemplos…" dentro del `Select`.** Es un ítem con un valor centinela que abre la galería en lugar de cambiar de mapa. Así se cumple "desde el selector de mapa" sin añadir un botón más al encabezado, que a 360 px ya va justo.
+- **Colores con nombre en las imágenes generadas.** Satori no lee variables CSS. `white`, `black`, `gray`, `gainsboro` y `royalblue` equivalen al tema claro, y el grep de colores no los marca. La excepción queda limitada a esos 3 archivos y anotada en REVIEW.md.
+- **URL de producción fija en el código**, no en una variable de entorno: el build por defecto de Vercel funciona sin configurar nada. Los previews también apuntan sus tarjetas a producción.
+- **El GIF se graba sobre el build de producción** con un viewport de 1120×680. Usa siguiente/anterior, que centran al 75%, en lugar de clics sobre el mapa completo, que queda al ~30% e ilegible en un GIF de 840 px.
+- **Sin dependencias nuevas.** ffmpeg es una herramienta local, solo para regenerar el GIF.
+
+### Problemas encontrados y resueltos
+
+1. **Anillo de foco invisible en las tarjetas de la galería.** `outline-none` + `focus-visible:outline-2` no dibuja nada en Tailwind 4 (`outline-style` sigue en `none`). Lo detectó el e2e de teclado; se arregló con `focus-visible:outline-solid`. Queda en REVIEW.md como clase de error.
+2. **Satori rechaza `dotted`** (`borderTopStyle` solo acepta `solid` o `dashed`) y el build falló al prerenderizar `/opengraph-image`. El caso límite usa `dashed` gris.
+3. **La primera versión de la imagen OG recortaba una tarjeta** en el borde derecho. Ahora las dos ramas cuelgan debajo del camino.
+4. **El e2e de teclado mandaba flechas antes de que abriera el menú.** Ahora espera a que "Nuevo mapa" tenga el foco.
+
+### Temas abiertos
+
+- **Flaky previo del slice 1**: `keyboard: create, move, delete and undo without a mouse` falla en 3 de 15 en esta rama y en 4 de 15 en la base `460082d`, en pasos distintos. No es de este slice. No se tocó para no pisar la sesión del slice 1; detalle en [checks.md](checks.md).
+- Mobbin no se consultó: la galería sigue los componentes shadcn ya usados (diálogo, tarjetas con borde, badge).
+- La imagen OG usa la fuente por defecto de `next/og`, no Geist: cargarla exigiría incluir el archivo de la fuente en el repo.
+- El enlace del diálogo "Compartir" en el GIF dice `localhost:3140`, porque se grabó en local.
+- Deploy a producción y anuncio quedan fuera (sin comandos `vercel`).

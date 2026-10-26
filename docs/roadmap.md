@@ -20,7 +20,7 @@
 - Estado vacío para mapas nuevos.
 - Limpieza de la revisión del slice 0: O1, O2, O3, O5, O7, O8, O9, O12, O-N1 a O-N5 y chips de conexión de 40 px en móvil.
 
-## Slice 2: compartir ✅ (este PR)
+## Slice 2: compartir ✅ (PR #3)
 
 - "Compartir": enlace con el mapa comprimido en el hash (`#m=`, lz-string), copiado al portapapeles; aviso por encima de 8000 caracteres.
 - Abrir un enlace: modo Ver de solo lectura, sin guardar; "Guardar en mis mapas" crea una copia editable. Enlaces dañados o inválidos muestran el error y la app sigue.
@@ -28,10 +28,15 @@
 - Exportar JSON (`<slug>.json`, esquema exacto) y PNG de todo el mapa (2x, fondo del tema).
 - Todo con teclado y `aria` en español.
 
-## Lanzamiento
+## Slice 3: lanzamiento ✅ (este PR)
 
-- Deploy a producción en Vercel (tras revisar los previews).
-- README con GIF, galería de mapas de ejemplo.
+- Galería de ejemplos: 4 mapas (suma "Mi semana" y "Lanzar un proyecto open source"), tarjetas con título, una línea, tamaño y mini mapa. Se abre desde el selector de mapa, el menú `⋯` y el estado vacío; con teclado, `aria` en español y a 360 px.
+- README de lanzamiento: pitch, funciones, cómo correrlo, esquema, GIF (`docs/media/demo.gif`, grabado con `pnpm demo:gif`) y capturas nuevas.
+- Metadatos: título, descripción, Open Graph y Twitter con imagen generada en el build (`next/og`), favicon e iconos propios, 404 en español. `pnpm build` sin variables de entorno.
+
+## Lanzamiento (pendiente, fuera de este repo)
+
+- Deploy a producción en Vercel (tras revisar los previews) en https://universe-gamma-eosin.vercel.app.
 - Anuncio público.
 
 ## Después del MVP
