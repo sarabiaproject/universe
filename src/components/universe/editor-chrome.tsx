@@ -1,8 +1,21 @@
 "use client";
 
 import { Panel, useReactFlow } from "@xyflow/react";
-import { Copy, Eye, FilePlus2, MoreHorizontal, Pencil, Plus, Redo2, Trash2, TextCursorInput, Undo2 } from "lucide-react";
-import { useCallback, useEffect, useState, useSyncExternalStore } from "react";
+import {
+  Copy,
+  Eye,
+  FilePlus2,
+  MoreHorizontal,
+  Pencil,
+  Plus,
+  Redo2,
+  Trash2,
+  TextCursorInput,
+  TriangleAlert,
+  Undo2,
+  X,
+} from "lucide-react";
+import { useCallback, useEffect, useRef, useState, useSyncExternalStore } from "react";
 
 import {
   AlertDialog,
@@ -225,6 +238,26 @@ export function ConnectDialog({
   );
 }
 
+/** Visible warning about saving: blocked or full storage, or a backup of unreadable maps. */
+export function StorageWarning() {
+  const warning = useMapStore((s) => s.storageWarning);
+  const dismiss = useMapStore((s) => s.dismissStorageWarning);
+  if (!warning) return null;
+  return (
+    <div
+      role="status"
+      data-testid="storage-warning"
+      className="flex items-start gap-2 border-b bg-muted px-3 py-1.5 text-xs text-foreground"
+    >
+      <TriangleAlert className="mt-0.5 size-3.5 shrink-0 text-destructive" aria-hidden />
+      <p className="min-w-0 flex-1 py-1">{warning}</p>
+      <Button variant="ghost" size="icon-sm" className="max-md:size-10" aria-label="Cerrar aviso" onClick={dismiss}>
+        <X />
+      </Button>
+    </div>
+  );
+}
+
 /** Confirms deleting a node that has connections. */
 export function DeleteNodeDialog({ map }: { map: SystemMap }) {
   const id = useMapStore((s) => s.confirmDeleteId);
@@ -233,9 +266,16 @@ export function DeleteNodeDialog({ map }: { map: SystemMap }) {
   const mod = useModKey();
   const node = map.nodes.find((n) => n.id === id);
   const count = map.edges.filter((e) => e.from === id || e.to === id).length;
+  const confirmed = useRef(false);
   return (
     <AlertDialog open={Boolean(node)} onOpenChange={(open) => !open && cancel()}>
-      <AlertDialogContent>
+      {/* On confirm the canvas focuses a neighbour; don't send focus back to the deleted node. */}
+      <AlertDialogContent
+        onCloseAutoFocus={(event) => {
+          if (confirmed.current) event.preventDefault();
+          confirmed.current = false;
+        }}
+      >
         <AlertDialogHeader>
           <AlertDialogTitle>¿Borrar «{node?.title}»?</AlertDialogTitle>
           <AlertDialogDescription>
@@ -245,7 +285,13 @@ export function DeleteNodeDialog({ map }: { map: SystemMap }) {
         </AlertDialogHeader>
         <AlertDialogFooter>
           <AlertDialogCancel>Cancelar</AlertDialogCancel>
-          <AlertDialogAction variant="destructive" onClick={confirm}>
+          <AlertDialogAction
+            variant="destructive"
+            onClick={() => {
+              confirmed.current = true;
+              confirm();
+            }}
+          >
             Borrar nodo
           </AlertDialogAction>
         </AlertDialogFooter>

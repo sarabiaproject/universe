@@ -21,7 +21,7 @@ import {
 import { useIsMobile } from "@/hooks/use-is-mobile";
 import { getNodeContext, positionLabel, type NodeContext } from "@/lib/graph";
 import type { SystemMap } from "@/lib/schema";
-import { currentMap, isBundled, useMapStore } from "@/store/map-store";
+import { currentMap, isBundled, STORAGE_KEY, useMapStore } from "@/store/map-store";
 
 import {
   ConnectDialog,
@@ -30,6 +30,7 @@ import {
   EmptyState,
   MapMenu,
   ModeToggle,
+  StorageWarning,
   useAddNode,
   useUndoShortcuts,
 } from "./editor-chrome";
@@ -165,7 +166,7 @@ function MobileBar({ map, ctx, editing }: { map: SystemMap; ctx: NodeContext | n
           </SheetHeader>
           <ScrollArea className="max-h-[85svh] overflow-y-auto">
             {editing ? (
-              <div className="pt-6">
+              <div className="pt-10">
                 <EditorPanel map={map} ctx={ctx} />
               </div>
             ) : (
@@ -196,6 +197,7 @@ function Editor() {
       <p className="sr-only" role="status" data-testid="notice">
         {notice}
       </p>
+      <StorageWarning />
       {isMobile ? (
         <>
           <div className="min-h-0 flex-1">
@@ -228,6 +230,12 @@ export function MapViewer() {
   // Read "Mis mapas" from localStorage after mount, so server and client render the same.
   useEffect(() => {
     void useMapStore.persist.rehydrate();
+    // Another tab saved: take its maps so this tab doesn't overwrite them with an old copy.
+    const onStorage = (event: StorageEvent) => {
+      if (event.key === STORAGE_KEY) useMapStore.getState().syncFromStorage(event.newValue);
+    };
+    window.addEventListener("storage", onStorage);
+    return () => window.removeEventListener("storage", onStorage);
   }, []);
 
   // Until then, a neutral screen: no flash of the desktop layout on mobile, nor of the wrong map.

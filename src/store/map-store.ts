@@ -1,5 +1,5 @@
 import { create } from "zustand";
-import { createJSONStorage, persist, type StateStorage } from "zustand/middleware";
+import { persist, type PersistStorage, type StorageValue } from "zustand/middleware";
 
 import {
   applyEdit,
@@ -13,6 +13,7 @@ import {
 import { getMainPath } from "@/lib/graph";
 import { layoutMap } from "@/lib/layout";
 import { parseDraftMap, type SystemMap } from "@/lib/schema";
+import { backup, openStorage, safeGet, safeSet, STORAGE_KEY, STORAGE_MESSAGES } from "@/lib/storage";
 import { BUNDLED_MAPS } from "@/maps";
 
 export type StoredMap = { id: string; map: SystemMap; updatedAt: number };
@@ -38,6 +39,10 @@ type MapState = {
   fitNonce: number;
   /** localStorage has been read (the UI waits for it to avoid a flash). */
   hydrated: boolean;
+  /** Visible warning about saving (blocked storage, full storage, backups); null when all is well. */
+  storageWarning: string | null;
+  /** Node to focus after a delete (the canvas focuses it, or itself when null). */
+  refocus: { nodeId: string | null; nonce: number };
 
   setMap: (mapId: string) => void;
   setMode: (mode: Mode) => void;
@@ -56,9 +61,12 @@ type MapState = {
   duplicateMap: (id?: string) => string | null;
   renameMap: (id: string, title: string) => void;
   deleteMap: (id: string) => void;
+  dismissStorageWarning: () => void;
+  /** Another tab saved "Mis mapas": take its maps, keep this tab's open map and mode. */
+  syncFromStorage: (raw: string | null) => void;
 };
 
-export const STORAGE_KEY = "universe";
+export { STORAGE_KEY };
 const DEFAULT_MAP_ID = BUNDLED_MAPS[0].id;
 
 export function isBundled(mapId: string) {
@@ -98,24 +106,26 @@ function withPositions(map: SystemMap): SystemMap {
   return { ...map, nodes: map.nodes.map((n) => ({ ...n, position: n.position ?? positions[n.id] })) };
 }
 
-const memory = new Map<string, string>();
-const memoryStorage: StateStorage = {
-  getItem: (key) => memory.get(key) ?? null,
-  setItem: (key, value) => void memory.set(key, value),
-  removeItem: (key) => void memory.delete(key),
-};
-
 type Persisted = Pick<MapState, "userMaps" | "mapId" | "mode">;
 
-/** Keeps only stored maps that still pass the field rules; unknown map ids fall back to the first example. */
-function restore(persisted: unknown): Persisted {
+/**
+ * Keeps only stored maps that pass the field rules and have a unique id that is
+ * not an example's. `dropped` counts what was left out. Unknown map ids fall back
+ * to the first example.
+ */
+export function restore(persisted: unknown): Persisted & { dropped: number } {
   const raw = (persisted ?? {}) as Partial<Record<keyof Persisted, unknown>>;
   const userMaps: StoredMap[] = [];
+  let dropped = 0;
+  if (raw.userMaps !== undefined && !Array.isArray(raw.userMaps)) dropped++;
   if (Array.isArray(raw.userMaps)) {
     for (const entry of raw.userMaps as Partial<StoredMap>[]) {
       const result = parseDraftMap(entry?.map);
-      if (result.ok && typeof entry.id === "string") {
-        userMaps.push({ id: entry.id, map: result.map, updatedAt: Number(entry.updatedAt) || 0 });
+      const id = entry?.id;
+      if (result.ok && typeof id === "string" && !isBundled(id) && !userMaps.some((m) => m.id === id)) {
+        userMaps.push({ id, map: result.map, updatedAt: Number(entry.updatedAt) || 0 });
+      } else {
+        dropped++;
       }
     }
   }
@@ -124,8 +134,47 @@ function restore(persisted: unknown): Persisted {
       ? raw.mapId
       : DEFAULT_MAP_ID;
   const mode: Mode = raw.mode === "edit" && !isBundled(mapId) ? "edit" : "view";
-  return { userMaps, mapId, mode };
+  return { userMaps, mapId, mode, dropped };
 }
+
+const { storage: textStorage, persistent } = openStorage();
+
+/** What the last read found, so `merge` can back the raw value up before it is overwritten. */
+const lastRead: { raw: string | null; unreadable: boolean } = { raw: null, unreadable: false };
+const lastWrite = { failing: false };
+
+const persistStorage: PersistStorage<Persisted> = {
+  getItem: (name) => {
+    const raw = safeGet(textStorage, name);
+    lastRead.raw = raw;
+    lastRead.unreadable = false;
+    if (raw === null) return null;
+    try {
+      return JSON.parse(raw) as StorageValue<Persisted>;
+    } catch {
+      lastRead.unreadable = true; // corrupt JSON: merge backs it up
+      return null;
+    }
+  },
+  setItem: (name, value) => {
+    const ok = safeSet(textStorage, name, JSON.stringify(value));
+    // Quota exceeded (or blocked mid-session): warn when saving starts failing, not on
+    // every write (the warning itself is a state change that writes again).
+    const startedFailing = !ok && !lastWrite.failing;
+    lastWrite.failing = !ok;
+    if (startedFailing) useMapStore.setState({ storageWarning: STORAGE_MESSAGES.full });
+  },
+  removeItem: (name) => {
+    try {
+      textStorage.removeItem(name);
+    } catch {
+      // Nothing to do.
+    }
+  },
+};
+
+/** Stored version of the persisted state. Bump it and extend `migrate` when the format changes. */
+export const STORAGE_VERSION = 1;
 
 export const useMapStore = create<MapState>()(
   persist(
@@ -174,6 +223,8 @@ export const useMapStore = create<MapState>()(
         focusNonce: 0,
         fitNonce: 0,
         hydrated: false,
+        storageWarning: null,
+        refocus: { nodeId: null, nonce: 0 },
 
         setMap: (mapId) => open(mapId),
         setMode: (mode) => {
@@ -203,6 +254,10 @@ export const useMapStore = create<MapState>()(
           const next = applyEdit(map, action);
           if (next === map) return;
           replaceCurrent(next, record(s.history, map, options?.key ?? null));
+          // Keyboard and screen reader users keep their place: focus a neighbour of what was deleted.
+          if (action.type === "deleteNode" || action.type === "deleteEdge") {
+            set((st) => ({ refocus: { nodeId: focusAfterDelete(map, action), nonce: st.refocus.nonce + 1 } }));
+          }
           if (action.type === "addNode") {
             set((st) => ({ selectedId: action.node.id, selectedEdge: null, focusNonce: st.focusNonce + 1 }));
           }
@@ -272,20 +327,64 @@ export const useMapStore = create<MapState>()(
           else set({ userMaps });
           set({ notice: `Mapa borrado: ${title}` });
         },
+        dismissStorageWarning: () => set({ storageWarning: null }),
+        syncFromStorage: (raw) => {
+          if (raw === null) return;
+          let parsed: StorageValue<Persisted>;
+          try {
+            parsed = JSON.parse(raw) as StorageValue<Persisted>;
+          } catch {
+            return;
+          }
+          if (parsed.version !== STORAGE_VERSION) return;
+          const { userMaps, dropped } = restore(parsed.state);
+          const s = get();
+          // Identical maps: nothing to do (and no write back, which would bounce between tabs).
+          if (dropped > 0 || JSON.stringify(userMaps) === JSON.stringify(s.userMaps)) return;
+          if (!isBundled(s.mapId) && !userMaps.some((m) => m.id === s.mapId)) {
+            open(userMaps[0]?.id ?? DEFAULT_MAP_ID, userMaps, "view");
+            return;
+          }
+          const map = currentMap({ userMaps, mapId: s.mapId });
+          const changed = JSON.stringify(map) !== JSON.stringify(currentMap(s));
+          // Set as is (no new updatedAt): a write here would bounce back to the other tab.
+          set({ userMaps });
+          if (!changed) return;
+          // The open map changed in the other tab: its undo history no longer applies.
+          set({
+            history: emptyHistory(),
+            selectedId: s.selectedId && map.nodes.some((n) => n.id === s.selectedId) ? s.selectedId : null,
+            selectedEdge: null,
+            confirmDeleteId: null,
+          });
+        },
       };
     },
     {
       name: STORAGE_KEY,
-      version: 1,
-      storage: createJSONStorage(() => (typeof localStorage === "undefined" ? memoryStorage : localStorage)),
+      version: STORAGE_VERSION,
+      storage: persistStorage,
+      // Hook for future formats. Today any other version is read as v1 and validated;
+      // whatever does not pass is backed up in `merge` before being overwritten.
+      migrate: (persisted, version) => {
+        lastRead.unreadable ||= version !== STORAGE_VERSION;
+        return persisted as Persisted;
+      },
       // Read on mount (see MapViewer) so the server render and the first client render match.
       skipHydration: true,
       partialize: (s): Persisted => ({ userMaps: s.userMaps, mapId: s.mapId, mode: s.mode }),
       merge: (persisted, current) => {
-        const restored = restore(persisted);
+        const { dropped, ...restored } = restore(persisted);
+        let storageWarning = persistent ? current.storageWarning : STORAGE_MESSAGES.blocked;
+        // Never lose data silently: keep the raw value before the next write replaces it.
+        if ((dropped > 0 || lastRead.unreadable) && lastRead.raw !== null) {
+          const key = backup(textStorage, lastRead.raw);
+          storageWarning = key ? STORAGE_MESSAGES.backup(key) : STORAGE_MESSAGES.full;
+        }
         return {
           ...current,
           ...restored,
+          storageWarning,
           selectedId: firstNode(findMap(restored, restored.mapId)),
           selectedEdge: null,
           history: emptyHistory(),
@@ -295,3 +394,13 @@ export const useMapStore = create<MapState>()(
     },
   ),
 );
+
+/** Where focus goes after a delete: the previous node on the path, the edge's source, or any neighbour. */
+function focusAfterDelete(map: SystemMap, action: EditAction): string | null {
+  if (action.type === "deleteEdge") return map.edges[action.index]?.from ?? null;
+  if (action.type !== "deleteNode") return null;
+  const touching = map.edges.filter((e) => e.from === action.id || e.to === action.id);
+  const prev = touching.find((e) => e.type === "main" && e.to === action.id)?.from;
+  const other = touching.map((e) => (e.from === action.id ? e.to : e.from))[0];
+  return prev ?? other ?? null;
+}

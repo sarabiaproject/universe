@@ -2,21 +2,27 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import { createNode } from "@/lib/editor";
 import { BUNDLED_MAPS } from "@/maps";
+import { BACKUP_PREFIX, STORAGE_MESSAGES } from "@/lib/storage";
 import { currentMap, isBundled, STORAGE_KEY, useMapStore } from "@/store/map-store";
 
 // In-memory localStorage so persistence can be checked in Node. Hoisted: the
 // store picks its storage when the module loads.
-const store = vi.hoisted(() => {
+const { store, io } = vi.hoisted(() => {
   const data = new Map<string, string>();
+  const io = { failWrites: false, writes: 0 };
   Object.defineProperty(globalThis, "localStorage", {
     configurable: true,
     value: {
       getItem: (k: string) => data.get(k) ?? null,
-      setItem: (k: string, v: string) => void data.set(k, v),
+      setItem: (k: string, v: string) => {
+        if (io.failWrites) throw new DOMException("Quota exceeded", "QuotaExceededError");
+        io.writes++;
+        data.set(k, v);
+      },
       removeItem: (k: string) => void data.delete(k),
     },
   });
-  return data;
+  return { store: data, io };
 });
 
 const initial = useMapStore.getState();
@@ -31,6 +37,7 @@ function addNode(position = { x: 0, y: 0 }) {
 
 beforeEach(() => {
   store.clear();
+  io.failWrites = false;
   useMapStore.setState(initial, true);
 });
 
@@ -201,5 +208,140 @@ describe("map store", () => {
     expect(state().userMaps.map((m) => m.id)).toEqual(["m-ok"]);
     expect(state().mapId).toBe(BUNDLED_MAPS[0].id);
     expect(state().mode).toBe("view");
+  });
+
+  describe("never loses stored data silently (D1)", () => {
+    const valid = (id: string, title = "Bien") => ({
+      id,
+      map: { version: 1, title, summary: "", nodes: [], edges: [] },
+      updatedAt: 1,
+    });
+    const backups = () => [...store.keys()].filter((k) => k.startsWith(BACKUP_PREFIX));
+
+    it("backs up the raw value when an entry is invalid and keeps the valid ones", async () => {
+      const bad = { ...valid("m-bad"), map: { ...valid("m-bad").map, summary: 1 } };
+      const raw = JSON.stringify({ version: 1, state: { mapId: "m-ok", mode: "view", userMaps: [bad, valid("m-ok")] } });
+      store.set(STORAGE_KEY, raw);
+      await useMapStore.persist.rehydrate();
+      expect(state().userMaps.map((m) => m.id)).toEqual(["m-ok"]);
+      expect(backups()).toHaveLength(1);
+      expect(store.get(backups()[0])).toBe(raw);
+      expect(state().storageWarning).toBe(STORAGE_MESSAGES.backup(backups()[0]));
+    });
+
+    it("backs up corrupt JSON before it is overwritten", async () => {
+      store.set(STORAGE_KEY, "{not json");
+      await useMapStore.persist.rehydrate();
+      expect(state().hydrated).toBe(true);
+      expect(state().mapId).toBe(BUNDLED_MAPS[0].id);
+      state().createMap(); // next write replaces the corrupt value
+      expect(store.get(backups()[0])).toBe("{not json");
+      expect(state().storageWarning).toMatch(/copia de seguridad/);
+    });
+
+    it("reads another stored version through migrate, keeps valid maps and backs up the original", async () => {
+      const raw = JSON.stringify({ version: 0, state: { mapId: "m-ok", mode: "edit", userMaps: [valid("m-ok")] } });
+      store.set(STORAGE_KEY, raw);
+      await useMapStore.persist.rehydrate();
+      expect(state().userMaps.map((m) => m.id)).toEqual(["m-ok"]);
+      expect(state().mapId).toBe("m-ok");
+      expect(store.get(backups()[0])).toBe(raw);
+    });
+
+    it("drops duplicate map ids and ids of the examples (O2), with a backup", async () => {
+      store.set(
+        STORAGE_KEY,
+        JSON.stringify({
+          version: 1,
+          state: { mapId: "m-a", mode: "view", userMaps: [valid("m-a", "A"), valid("m-a", "B"), valid("universe-spec")] },
+        }),
+      );
+      await useMapStore.persist.rehydrate();
+      expect(state().userMaps.map((m) => m.map.title)).toEqual(["A"]);
+      expect(currentMap({ userMaps: state().userMaps, mapId: "universe-spec" })).toBe(BUNDLED_MAPS[0].map);
+      expect(backups()).toHaveLength(1);
+    });
+
+    it("no warning and no backup when everything is readable", async () => {
+      store.set(STORAGE_KEY, JSON.stringify({ version: 1, state: { mapId: "m-ok", mode: "view", userMaps: [valid("m-ok")] } }));
+      await useMapStore.persist.rehydrate();
+      expect(backups()).toHaveLength(0);
+      expect(state().storageWarning).toBeNull();
+    });
+  });
+
+  it("warns when the browser refuses to save (quota, O4)", () => {
+    state().createMap();
+    io.failWrites = true;
+    addNode();
+    expect(state().storageWarning).toBe(STORAGE_MESSAGES.full);
+    expect(map().nodes).toHaveLength(1); // the session keeps working
+    state().dismissStorageWarning();
+    expect(state().storageWarning).toBeNull();
+  });
+
+  describe("other tabs (O10)", () => {
+    it("takes the maps another tab saved and keeps this tab's open map", () => {
+      const mine = state().createMap();
+      addNode();
+      const otherTab = {
+        version: 1,
+        state: {
+          mapId: "m-other",
+          mode: "view",
+          userMaps: [
+            ...state().userMaps,
+            { id: "m-other", map: { version: 1, title: "De otra pestaña", summary: "", nodes: [], edges: [] }, updatedAt: 2 },
+          ],
+        },
+      };
+      state().syncFromStorage(JSON.stringify(otherTab));
+      expect(state().userMaps.map((m) => m.id)).toEqual([mine, "m-other"]);
+      expect(state().mapId).toBe(mine);
+      expect(map().nodes).toHaveLength(1);
+    });
+
+    it("identical maps do not write back (no ping-pong between tabs)", () => {
+      state().createMap();
+      const raw = store.get(STORAGE_KEY)!;
+      const writes = io.writes;
+      state().syncFromStorage(raw.replace('"mode":"edit"', '"mode":"view"'));
+      expect(io.writes).toBe(writes);
+    });
+
+    it("resets the undo history when the other tab changed the open map", () => {
+      state().createMap();
+      addNode();
+      const other = JSON.parse(store.get(STORAGE_KEY)!);
+      other.state.userMaps[0].map.title = "Renombrado allá";
+      state().syncFromStorage(JSON.stringify(other));
+      expect(map().title).toBe("Renombrado allá");
+      expect(state().history.past).toHaveLength(0);
+    });
+
+    it("ignores unreadable or foreign values", () => {
+      state().createMap();
+      const before = state().userMaps;
+      state().syncFromStorage("{nope");
+      state().syncFromStorage(JSON.stringify({ version: 7, state: { userMaps: [] } }));
+      state().syncFromStorage(null);
+      expect(state().userMaps).toBe(before);
+    });
+  });
+
+  it("asks the canvas to focus a neighbour after a delete (D3)", () => {
+    state().createMap();
+    const a = addNode();
+    const b = addNode({ x: 300, y: 0 });
+    state().edit({ type: "addEdge", edge: { from: a, to: b, type: "main" } });
+    const nonce = state().refocus.nonce;
+    state().edit({ type: "deleteEdge", index: 0 });
+    expect(state().refocus).toEqual({ nodeId: a, nonce: nonce + 1 });
+    state().undo();
+    state().requestDeleteNode(b);
+    state().confirmDelete();
+    expect(state().refocus.nodeId).toBe(a); // previous node on the main path
+    state().requestDeleteNode(a);
+    expect(state().refocus.nodeId).toBeNull(); // nothing left: the canvas itself
   });
 });
