@@ -1,7 +1,7 @@
 "use client";
 
-import { CircleAlert, Copy, Link2, Save, Share2, X } from "lucide-react";
-import { useCallback, useId, useState } from "react";
+import { CircleAlert, Copy, FileUp, Link2, Save, Share2, X } from "lucide-react";
+import { useCallback, useId, useRef, useState } from "react";
 
 import { Button } from "@/components/ui/button";
 import {
@@ -11,6 +11,7 @@ import {
   DialogFooter,
   DialogHeader,
   DialogTitle,
+  DialogTrigger,
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -22,6 +23,7 @@ import { SHARE_URL_WARN_LENGTH, shareUrl } from "@/lib/share";
 import { currentMap, SHARED_ID, useMapStore } from "@/store/map-store";
 
 const MAX_LISTED_ERRORS = 12;
+const PASTED = "el texto pegado";
 
 /** "Compartir": copies a link with the map inside the hash and shows it in a dialog. */
 export function ShareButton() {
@@ -39,7 +41,11 @@ export function ShareButton() {
     }
   }, []);
 
-  const open = () => {
+  const onOpenChange = (next: boolean) => {
+    if (!next) {
+      setUrl(null);
+      return;
+    }
     const link = shareUrl(currentMap(useMapStore.getState()), window.location.href);
     setUrl(link);
     setCopied(null);
@@ -48,64 +54,64 @@ export function ShareButton() {
 
   const long = url !== null && url.length > SHARE_URL_WARN_LENGTH;
   return (
-    <>
-      <Button
-        variant="outline"
-        size="sm"
-        className="bg-background max-md:size-10 max-md:px-0"
-        onClick={open}
-        aria-label="Compartir"
-        data-testid="share-button"
-      >
-        <Share2 />
-        <span className="max-md:sr-only">Compartir</span>
-      </Button>
-      <Dialog open={url !== null} onOpenChange={(o) => !o && setUrl(null)}>
-        <DialogContent data-testid="share-dialog">
-          <DialogHeader>
-            <DialogTitle>Compartir mapa</DialogTitle>
-            <DialogDescription>
-              Quien abra el enlace verá este mapa en modo Ver y podrá guardarlo en sus mapas. El mapa va dentro del
-              enlace: no se sube a ningún servidor.
-            </DialogDescription>
-          </DialogHeader>
-          <div className="flex min-w-0 flex-col gap-1.5">
-            <Label htmlFor={inputId}>Enlace</Label>
-            <Input
-              id={inputId}
-              readOnly
-              value={url ?? ""}
-              onFocus={(e) => e.currentTarget.select()}
-              className="font-mono text-xs"
-              data-testid="share-url"
-            />
-            <p role="status" className="text-xs text-muted-foreground" data-testid="share-status">
-              {copied === true
-                ? "Enlace copiado al portapapeles."
-                : copied === false
-                  ? "No se pudo copiar automáticamente: selecciona el enlace y cópialo."
-                  : ""}
+    // With a trigger, Radix gives focus back to "Compartir" on close.
+    <Dialog open={url !== null} onOpenChange={onOpenChange}>
+      <DialogTrigger asChild>
+        <Button
+          variant="outline"
+          size="sm"
+          className="bg-background max-md:size-10 max-md:px-0"
+          aria-label="Compartir"
+          data-testid="share-button"
+        >
+          <Share2 />
+          <span className="max-md:sr-only">Compartir</span>
+        </Button>
+      </DialogTrigger>
+      <DialogContent data-testid="share-dialog">
+        <DialogHeader>
+          <DialogTitle>Compartir mapa</DialogTitle>
+          <DialogDescription>
+            Quien abra el enlace verá este mapa en modo Ver y podrá guardarlo en sus mapas. El mapa va dentro del
+            enlace: no se sube a ningún servidor.
+          </DialogDescription>
+        </DialogHeader>
+        <div className="flex min-w-0 flex-col gap-1.5">
+          <Label htmlFor={inputId}>Enlace</Label>
+          <Input
+            id={inputId}
+            readOnly
+            value={url ?? ""}
+            onFocus={(e) => e.currentTarget.select()}
+            className="font-mono text-xs"
+            data-testid="share-url"
+          />
+          <p role="status" className="text-xs text-muted-foreground" data-testid="share-status">
+            {copied === true
+              ? "Enlace copiado al portapapeles."
+              : copied === false
+                ? "No se pudo copiar automáticamente: selecciona el enlace y cópialo."
+                : ""}
+          </p>
+          {long && (
+            <p className="flex items-start gap-1.5 text-xs text-foreground" data-testid="share-long">
+              <CircleAlert className="mt-0.5 size-3.5 shrink-0 text-destructive" aria-hidden />
+              El enlace tiene {url.length.toLocaleString("es")} caracteres (más de{" "}
+              {SHARE_URL_WARN_LENGTH.toLocaleString("es")}): algunas apps y navegadores pueden cortarlo. Para mapas
+              grandes, usa «Exportar JSON».
             </p>
-            {long && (
-              <p className="flex items-start gap-1.5 text-xs text-foreground" data-testid="share-long">
-                <CircleAlert className="mt-0.5 size-3.5 shrink-0 text-destructive" aria-hidden />
-                El enlace tiene {url.length.toLocaleString("es")} caracteres (más de{" "}
-                {SHARE_URL_WARN_LENGTH.toLocaleString("es")}): algunas apps y navegadores pueden cortarlo. Para mapas
-                grandes, usa «Exportar JSON».
-              </p>
-            )}
-          </div>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setUrl(null)}>
-              Cerrar
-            </Button>
-            <Button onClick={() => url && void copy(url)}>
-              <Copy /> Copiar enlace
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-    </>
+          )}
+        </div>
+        <DialogFooter>
+          <Button variant="outline" onClick={() => setUrl(null)}>
+            Cerrar
+          </Button>
+          <Button onClick={() => url && void copy(url)}>
+            <Copy /> Copiar enlace
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
   );
 }
 
@@ -128,7 +134,8 @@ function ErrorList({ title, items }: { title: string; items: string[] }) {
 export function ImportDialog({ open, onOpenChange }: { open: boolean; onOpenChange: (open: boolean) => void }) {
   const importMap = useMapStore((s) => s.importMap);
   const [text, setText] = useState("");
-  const [errors, setErrors] = useState<{ title: string; items: string[] } | null>(null);
+  const [errors, setErrors] = useState<{ title: string; items: string[]; fromText: boolean } | null>(null);
+  const fileInput = useRef<HTMLInputElement>(null);
   const fileId = useId();
   const textId = useId();
 
@@ -143,7 +150,7 @@ export function ImportDialog({ open, onOpenChange }: { open: boolean; onOpenChan
   const tryImport = (raw: string, source: string) => {
     const result = parseImportText(raw);
     if (!result.ok) {
-      setErrors({ title: `No se pudo importar ${source}:`, items: result.errors });
+      setErrors({ title: `No se pudo importar ${source}:`, items: result.errors, fromText: source === PASTED });
       return;
     }
     importMap(result.map, result.problems);
@@ -153,14 +160,14 @@ export function ImportDialog({ open, onOpenChange }: { open: boolean; onOpenChan
   const onFile = async (file: File | undefined) => {
     if (!file) return;
     if (file.size > MAX_IMPORT_BYTES) {
-      setErrors({ title: `No se pudo importar «${file.name}»:`, items: ["El archivo pesa más de 5 MB."] });
+      setErrors({ title: `No se pudo importar «${file.name}»:`, items: ["El archivo pesa más de 5 MB."], fromText: false });
       return;
     }
     let raw: string;
     try {
       raw = await file.text();
     } catch {
-      setErrors({ title: `No se pudo importar «${file.name}»:`, items: ["No se pudo leer el archivo."] });
+      setErrors({ title: `No se pudo importar «${file.name}»:`, items: ["No se pudo leer el archivo."], fromText: false });
       return;
     }
     tryImport(raw, `«${file.name}»`);
@@ -168,12 +175,20 @@ export function ImportDialog({ open, onOpenChange }: { open: boolean; onOpenChan
 
   return (
     <Dialog open={open} onOpenChange={close}>
-      <DialogContent data-testid="import-dialog" className="max-h-[90svh] overflow-y-auto">
+      <DialogContent
+        data-testid="import-dialog"
+        className="max-h-[90svh] overflow-y-auto"
+        // Opened from the map menu, which is gone by now: give focus back to its trigger.
+        onCloseAutoFocus={(event) => {
+          event.preventDefault();
+          document.querySelector<HTMLElement>('[data-testid="map-menu"]')?.focus();
+        }}
+      >
         <form
           className="flex min-w-0 flex-col gap-4"
           onSubmit={(event) => {
             event.preventDefault();
-            tryImport(text, "el texto pegado");
+            tryImport(text, PASTED);
           }}
         >
           <DialogHeader>
@@ -182,19 +197,33 @@ export function ImportDialog({ open, onOpenChange }: { open: boolean; onOpenChan
               El mapa se valida con el esquema y se añade a «Mis mapas» como un mapa nuevo.
             </DialogDescription>
           </DialogHeader>
-          <div className="flex flex-col gap-1.5">
-            <Label htmlFor={fileId}>Desde un archivo</Label>
-            <Input
-              id={fileId}
+          <div className="flex flex-col items-start gap-1.5">
+            {/* The native file input says "Choose File" in the browser's language: a Spanish button opens it. */}
+            <p id={fileId} className="text-sm leading-none font-medium">
+              Desde un archivo
+            </p>
+            <input
+              ref={fileInput}
               type="file"
               accept=".json,application/json"
-              className="h-10"
+              className="sr-only"
+              tabIndex={-1}
+              aria-hidden
               data-testid="import-file"
               onChange={(e) => {
                 void onFile(e.currentTarget.files?.[0]);
                 e.currentTarget.value = "";
               }}
             />
+            <Button
+              type="button"
+              variant="outline"
+              className="max-md:h-10"
+              aria-describedby={fileId}
+              onClick={() => fileInput.current?.click()}
+            >
+              <FileUp /> Elegir archivo JSON…
+            </Button>
           </div>
           <div className="flex flex-col gap-1.5">
             <Label htmlFor={textId}>O pega el JSON</Label>
@@ -205,7 +234,7 @@ export function ImportDialog({ open, onOpenChange }: { open: boolean; onOpenChan
               placeholder='{ "version": 1, "title": "…", "summary": "", "nodes": [], "edges": [] }'
               className="max-h-48 min-h-24 font-mono text-xs"
               spellCheck={false}
-              aria-invalid={errors !== null}
+              aria-invalid={errors?.fromText ?? false}
               data-testid="import-text"
             />
           </div>
