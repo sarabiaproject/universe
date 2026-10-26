@@ -145,6 +145,7 @@ test.describe("examples gallery (desktop)", () => {
     await expect(page.getByTestId("empty-state")).toBeVisible();
     const open = page.getByTestId("open-gallery-from-empty");
     await expect(open).toHaveText("O abre un ejemplo");
+    await expect(page.getByRole("menu")).toBeHidden();
     await page.screenshot({ path: `${SHOTS}/empty-with-examples.png` });
 
     // Escape comes back to the button that opened it.
