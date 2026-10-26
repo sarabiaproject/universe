@@ -11,12 +11,13 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { BUNDLED_MAPS } from "@/maps";
-import { useMapStore } from "@/store/map-store";
+import { SHARED_ID, useMapStore } from "@/store/map-store";
 
 export function MapPicker() {
   const mapId = useMapStore((s) => s.mapId);
   const userMaps = useMapStore((s) => s.userMaps);
   const setMap = useMapStore((s) => s.setMap);
+  const shared = useMapStore((s) => s.shared);
   return (
     <Select value={mapId} onValueChange={setMap}>
       <SelectTrigger
@@ -28,6 +29,15 @@ export function MapPicker() {
         <SelectValue />
       </SelectTrigger>
       <SelectContent position="popper" align="end">
+        {shared && (
+          <>
+            <SelectGroup>
+              <SelectLabel>Compartido (sin guardar)</SelectLabel>
+              <SelectItem value={SHARED_ID}>{shared.map.title}</SelectItem>
+            </SelectGroup>
+            <SelectSeparator />
+          </>
+        )}
         {userMaps.length > 0 && (
           <>
             <SelectGroup>

@@ -4,7 +4,10 @@ import { Panel, useReactFlow } from "@xyflow/react";
 import {
   Copy,
   Eye,
+  FileDown,
+  FileUp,
   FilePlus2,
+  ImageDown,
   MoreHorizontal,
   Pencil,
   Plus,
@@ -50,9 +53,10 @@ import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip
 import { createNode, freeSpot, suggestedEdgeType } from "@/lib/editor";
 import { layoutMap, NODE_HEIGHT, NODE_WIDTH } from "@/lib/layout";
 import { SystemMapDraftSchema, type EdgeType, type SystemMap } from "@/lib/schema";
-import { currentMap, isBundled, useMapStore } from "@/store/map-store";
+import { currentMap, isReadOnly, useMapStore } from "@/store/map-store";
 
 import { EDGE_HINT, EDGE_LABEL } from "./labels";
+import { exportJson, exportPng, ImportDialog } from "./share-chrome";
 
 const subscribeNoop = () => () => {};
 
@@ -327,7 +331,7 @@ export function ModeToggle() {
   );
 }
 
-/** New, duplicate, rename and delete maps. */
+/** New, duplicate, rename, delete, import and export maps. */
 export function MapMenu() {
   const mapId = useMapStore((s) => s.mapId);
   const createMap = useMapStore((s) => s.createMap);
@@ -335,8 +339,9 @@ export function MapMenu() {
   const renameMap = useMapStore((s) => s.renameMap);
   const deleteMap = useMapStore((s) => s.deleteMap);
   const title = useMapStore((s) => currentMap(s).title);
-  const bundled = isBundled(mapId);
-  const [dialog, setDialog] = useState<"rename" | "delete" | null>(null);
+  const empty = useMapStore((s) => currentMap(s).nodes.length === 0);
+  const bundled = isReadOnly(mapId);
+  const [dialog, setDialog] = useState<"rename" | "delete" | "import" | null>(null);
   const [name, setName] = useState("");
   const nameError = dialog === "rename" ? checkTitle(name) : null;
 
@@ -354,12 +359,22 @@ export function MapMenu() {
             <MoreHorizontal />
           </Button>
         </DropdownMenuTrigger>
-        <DropdownMenuContent align="end" className="w-48">
+        <DropdownMenuContent align="end" className="w-52">
           <DropdownMenuItem onSelect={() => createMap()}>
             <FilePlus2 /> Nuevo mapa
           </DropdownMenuItem>
           <DropdownMenuItem onSelect={() => duplicateMap()}>
             <Copy /> {bundled ? "Duplicar para editar" : "Duplicar"}
+          </DropdownMenuItem>
+          <DropdownMenuItem onSelect={() => setDialog("import")}>
+            <FileUp /> Importar JSON…
+          </DropdownMenuItem>
+          <DropdownMenuSeparator />
+          <DropdownMenuItem onSelect={() => exportJson(currentMap(useMapStore.getState()))}>
+            <FileDown /> Exportar JSON
+          </DropdownMenuItem>
+          <DropdownMenuItem disabled={empty} onSelect={() => void exportPng(currentMap(useMapStore.getState()))}>
+            <ImageDown /> Exportar PNG
           </DropdownMenuItem>
           {!bundled && (
             <>
@@ -422,6 +437,8 @@ export function MapMenu() {
           </form>
         </DialogContent>
       </Dialog>
+
+      <ImportDialog open={dialog === "import"} onOpenChange={(open) => setDialog(open ? "import" : null)} />
 
       <AlertDialog open={dialog === "delete"} onOpenChange={(open) => !open && setDialog(null)}>
         <AlertDialogContent>

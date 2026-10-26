@@ -21,7 +21,8 @@ import {
 import { useIsMobile } from "@/hooks/use-is-mobile";
 import { getNodeContext, positionLabel, type NodeContext } from "@/lib/graph";
 import type { SystemMap } from "@/lib/schema";
-import { currentMap, isBundled, STORAGE_KEY, useMapStore } from "@/store/map-store";
+import { isShareHash } from "@/lib/share";
+import { currentMap, isBundled, SHARED_ID, STORAGE_KEY, useMapStore } from "@/store/map-store";
 
 import {
   ConnectDialog,
@@ -40,6 +41,7 @@ import { MapHeader } from "./map-header";
 import { MapPicker } from "./map-picker";
 import { NavButtons, NodeDetail } from "./node-detail";
 import { EdgeEditor, MapProblems, MapSettings, NodeEditor } from "./node-editor";
+import { AlertBanner, SharedBanner, ShareButton } from "./share-chrome";
 import { ThemeToggle } from "./theme-toggle";
 
 const DETAIL_ID = "detalle";
@@ -73,11 +75,16 @@ function CanvasArea({ map, editing }: { map: SystemMap; editing: boolean }) {
       <div className="pointer-events-none absolute inset-x-3 top-3 z-10 flex flex-col-reverse items-start gap-2 sm:flex-row sm:justify-between">
         <div className="flex flex-col items-start gap-2">
           <SkipToDetail />
-          <MapHeader map={map} editing={editing} example={isBundled(mapId)} />
+          <MapHeader
+            map={map}
+            editing={editing}
+            source={mapId === SHARED_ID ? "shared" : isBundled(mapId) ? "example" : "user"}
+          />
         </div>
         <div className="pointer-events-auto flex flex-wrap items-center justify-end gap-1.5 self-end sm:self-auto">
           <MapPicker />
           <MapMenu />
+          <ShareButton />
           <ModeToggle />
           <ThemeToggle />
         </div>
@@ -198,6 +205,8 @@ function Editor() {
         {notice}
       </p>
       <StorageWarning />
+      <AlertBanner />
+      <SharedBanner />
       {isMobile ? (
         <>
           <div className="min-h-0 flex-1">
@@ -229,13 +238,31 @@ export function MapViewer() {
   const hydrated = useMapStore((s) => s.hydrated);
   // Read "Mis mapas" from localStorage after mount, so server and client render the same.
   useEffect(() => {
-    void useMapStore.persist.rehydrate();
+    // The `#m=` link is opened right after reading (see onRehydrateStorage). Once the
+    // shared map is left (saved, another map picked) or could not be opened, the hash goes.
+    const clearStaleHash = () => {
+      if (useMapStore.getState().mapId !== SHARED_ID && isShareHash(window.location.hash)) {
+        window.history.replaceState(null, "", window.location.pathname + window.location.search);
+      }
+    };
+    void useMapStore.persist.rehydrate()?.then(clearStaleHash);
+    const unsubscribe = useMapStore.subscribe((s, prev) => s.mapId !== prev.mapId && clearStaleHash());
+    // A link pasted into this tab's address bar.
+    const onHashChange = () => {
+      const result = useMapStore.getState().openLink(window.location.hash);
+      if (result && !result.ok) window.history.replaceState(null, "", window.location.pathname + window.location.search);
+    };
     // Another tab saved: take its maps so this tab doesn't overwrite them with an old copy.
     const onStorage = (event: StorageEvent) => {
       if (event.key === STORAGE_KEY) useMapStore.getState().syncFromStorage(event.newValue);
     };
     window.addEventListener("storage", onStorage);
-    return () => window.removeEventListener("storage", onStorage);
+    window.addEventListener("hashchange", onHashChange);
+    return () => {
+      unsubscribe();
+      window.removeEventListener("storage", onStorage);
+      window.removeEventListener("hashchange", onHashChange);
+    };
   }, []);
 
   // Until then, a neutral screen: no flash of the desktop layout on mobile, nor of the wrong map.

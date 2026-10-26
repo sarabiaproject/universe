@@ -12,12 +12,19 @@ import {
 } from "@/lib/editor";
 import { getMainPath } from "@/lib/graph";
 import { layoutMap } from "@/lib/layout";
+import type { ImportResult } from "@/lib/io";
 import { parseDraftMap, type SystemMap } from "@/lib/schema";
+import { decodeShareHash, isShareHash } from "@/lib/share";
 import { backup, openStorage, safeGet, safeSet, STORAGE_KEY, STORAGE_MESSAGES } from "@/lib/storage";
 import { BUNDLED_MAPS } from "@/maps";
 
 export type StoredMap = { id: string; map: SystemMap; updatedAt: number };
 export type Mode = "view" | "edit";
+/** A map opened from a `#m=` link: read-only until it is saved in "Mis mapas". Never persisted. */
+export type SharedMap = { map: SystemMap; problems: string[]; returnTo: string };
+
+/** Map id of the map opened from a link. */
+export const SHARED_ID = "compartido";
 
 type MapState = {
   /** "Mis mapas", persisted in localStorage. Bundled maps are read-only examples. */
@@ -43,6 +50,10 @@ type MapState = {
   storageWarning: string | null;
   /** Node to focus after a delete (the canvas focuses it, or itself when null). */
   refocus: { nodeId: string | null; nonce: number };
+  /** Map opened from a link (`mapId === SHARED_ID` while it is on screen). */
+  shared: SharedMap | null;
+  /** Visible error with details (a link that could not be opened, a failed export); null when there is none. */
+  alert: { title: string; items: string[] } | null;
 
   setMap: (mapId: string) => void;
   setMode: (mode: Mode) => void;
@@ -64,6 +75,17 @@ type MapState = {
   dismissStorageWarning: () => void;
   /** Another tab saved "Mis mapas": take its maps, keep this tab's open map and mode. */
   syncFromStorage: (raw: string | null) => void;
+  /** Opens the map in a `#m=` hash in view mode; null when the hash has none. */
+  openLink: (hash: string) => ImportResult | null;
+  /** Saves the map opened from a link in "Mis mapas" and opens the copy in edit mode. */
+  saveShared: () => string | null;
+  dismissAlert: () => void;
+  /** Visible error (link, import, export) with its details. */
+  showAlert: (title: string, items: string[]) => void;
+  /** Message for screen readers. */
+  announce: (notice: string) => void;
+  /** Adds an imported map to "Mis mapas" and opens it. */
+  importMap: (map: SystemMap, problems?: string[]) => string;
 };
 
 export { STORAGE_KEY };
@@ -73,14 +95,22 @@ export function isBundled(mapId: string) {
   return BUNDLED_MAPS.some((m) => m.id === mapId);
 }
 
-export function findMap(state: Pick<MapState, "userMaps">, mapId: string): SystemMap | null {
+/** Examples and the map opened from a link can't be edited; "Editar" works on a copy. */
+export function isReadOnly(mapId: string) {
+  return mapId === SHARED_ID || isBundled(mapId);
+}
+
+type MapSource = Pick<MapState, "userMaps"> & { shared?: SharedMap | null };
+
+export function findMap(state: MapSource, mapId: string): SystemMap | null {
+  if (mapId === SHARED_ID) return state.shared?.map ?? null;
   return (
     state.userMaps.find((m) => m.id === mapId)?.map ?? BUNDLED_MAPS.find((m) => m.id === mapId)?.map ?? null
   );
 }
 
 /** The map on screen. */
-export function currentMap(state: Pick<MapState, "userMaps" | "mapId">): SystemMap {
+export function currentMap(state: MapSource & Pick<MapState, "mapId">): SystemMap {
   return findMap(state, state.mapId) ?? BUNDLED_MAPS[0].map;
 }
 
@@ -122,7 +152,7 @@ export function restore(persisted: unknown): Persisted & { dropped: number } {
     for (const entry of raw.userMaps as Partial<StoredMap>[]) {
       const result = parseDraftMap(entry?.map);
       const id = entry?.id;
-      if (result.ok && typeof id === "string" && !isBundled(id) && !userMaps.some((m) => m.id === id)) {
+      if (result.ok && typeof id === "string" && !isReadOnly(id) && !userMaps.some((m) => m.id === id)) {
         userMaps.push({ id, map: result.map, updatedAt: Number(entry.updatedAt) || 0 });
       } else {
         dropped++;
@@ -181,11 +211,11 @@ export const useMapStore = create<MapState>()(
     (set, get) => {
       /** Switches to `mapId` with a fresh selection and history. */
       const open = (mapId: string, userMaps = get().userMaps, mode?: Mode) => {
-        const map = findMap({ userMaps }, mapId);
+        const map = findMap({ userMaps, shared: get().shared }, mapId);
         set((s) => ({
           userMaps,
           mapId,
-          mode: isBundled(mapId) ? "view" : (mode ?? s.mode),
+          mode: isReadOnly(mapId) ? "view" : (mode ?? s.mode),
           selectedId: firstNode(map),
           selectedEdge: null,
           history: emptyHistory(),
@@ -211,6 +241,17 @@ export const useMapStore = create<MapState>()(
         });
       };
 
+      /** Adds `map` to "Mis mapas" (unique title, fixed positions) and opens it. */
+      const addUserMap = (map: SystemMap, mode?: Mode) => {
+        const { userMaps } = get();
+        const id = newId();
+        const titles = new Set(userMaps.map((m) => m.map.title));
+        const copy = withPositions(structuredClone(map));
+        if (titles.has(copy.title)) copy.title = uniqueTitle(userMaps, copy.title);
+        open(id, [...userMaps, { id, map: copy, updatedAt: Date.now() }], mode);
+        return { id, title: copy.title };
+      };
+
       return {
         userMaps: [],
         mapId: DEFAULT_MAP_ID,
@@ -225,10 +266,16 @@ export const useMapStore = create<MapState>()(
         hydrated: false,
         storageWarning: null,
         refocus: { nodeId: null, nonce: 0 },
+        shared: null,
+        alert: null,
 
         setMap: (mapId) => open(mapId),
         setMode: (mode) => {
           const { mapId } = get();
+          if (mode === "edit" && mapId === SHARED_ID) {
+            get().saveShared();
+            return;
+          }
           if (mode === "edit" && isBundled(mapId)) {
             // Examples are read-only: editing one works on a copy.
             const copy = get().duplicateMap(mapId);
@@ -249,7 +296,7 @@ export const useMapStore = create<MapState>()(
 
         edit: (action, options) => {
           const s = get();
-          if (isBundled(s.mapId)) return;
+          if (isReadOnly(s.mapId)) return;
           const map = currentMap(s);
           const next = applyEdit(map, action);
           if (next === map) return;
@@ -301,7 +348,7 @@ export const useMapStore = create<MapState>()(
         },
         duplicateMap: (source = get().mapId) => {
           const { userMaps } = get();
-          const original = findMap({ userMaps }, source);
+          const original = findMap({ userMaps, shared: get().shared }, source);
           if (!original) return null;
           const id = newId();
           const map = { ...withPositions(structuredClone(original)), title: uniqueTitle(userMaps, `${original.title} (copia)`) };
@@ -341,11 +388,11 @@ export const useMapStore = create<MapState>()(
           const s = get();
           // Identical maps: nothing to do (and no write back, which would bounce between tabs).
           if (dropped > 0 || JSON.stringify(userMaps) === JSON.stringify(s.userMaps)) return;
-          if (!isBundled(s.mapId) && !userMaps.some((m) => m.id === s.mapId)) {
+          if (!isReadOnly(s.mapId) && !userMaps.some((m) => m.id === s.mapId)) {
             open(userMaps[0]?.id ?? DEFAULT_MAP_ID, userMaps, "view");
             return;
           }
-          const map = currentMap({ userMaps, mapId: s.mapId });
+          const map = currentMap({ userMaps, mapId: s.mapId, shared: s.shared });
           const changed = JSON.stringify(map) !== JSON.stringify(currentMap(s));
           // Set as is (no new updatedAt): a write here would bounce back to the other tab.
           set({ userMaps });
@@ -357,6 +404,39 @@ export const useMapStore = create<MapState>()(
             selectedEdge: null,
             confirmDeleteId: null,
           });
+        },
+        openLink: (hash) => {
+          if (!isShareHash(hash)) return null;
+          const result = decodeShareHash(hash);
+          if (!result.ok) {
+            set({ alert: { title: "No se pudo abrir el enlace", items: result.errors } });
+            return result;
+          }
+          const s = get();
+          const returnTo = s.mapId === SHARED_ID ? (s.shared?.returnTo ?? DEFAULT_MAP_ID) : s.mapId;
+          set({ shared: { map: result.map, problems: result.problems, returnTo }, alert: null });
+          open(SHARED_ID, s.userMaps, "view");
+          return result;
+        },
+        saveShared: () => {
+          const { shared } = get();
+          if (!shared) return null;
+          const { id, title } = addUserMap(shared.map, "edit");
+          set({ shared: null, notice: `Guardado en Mis mapas: ${title}` });
+          return id;
+        },
+        dismissAlert: () => set({ alert: null }),
+        showAlert: (title, items) => set({ alert: { title, items } }),
+        announce: (notice) => set({ notice }),
+        importMap: (map, problems = []) => {
+          const { id, title } = addUserMap(map, problems.length > 0 ? "edit" : undefined);
+          set({
+            notice:
+              problems.length > 0
+                ? `Mapa importado: ${title}. Tiene ${problems.length} ${problems.length === 1 ? "problema" : "problemas"} del camino principal; se listan en el panel.`
+                : `Mapa importado: ${title}`,
+          });
+          return id;
         },
       };
     },
@@ -372,7 +452,12 @@ export const useMapStore = create<MapState>()(
       },
       // Read on mount (see MapViewer) so the server render and the first client render match.
       skipHydration: true,
-      partialize: (s): Persisted => ({ userMaps: s.userMaps, mapId: s.mapId, mode: s.mode }),
+      // A map opened from a link is not saved: a reload goes back to the map open before it.
+      partialize: (s): Persisted => ({
+        userMaps: s.userMaps,
+        mapId: s.mapId === SHARED_ID ? (s.shared?.returnTo ?? DEFAULT_MAP_ID) : s.mapId,
+        mode: s.mode,
+      }),
       merge: (persisted, current) => {
         const { dropped, ...restored } = restore(persisted);
         let storageWarning = persistent ? current.storageWarning : STORAGE_MESSAGES.blocked;
@@ -390,7 +475,11 @@ export const useMapStore = create<MapState>()(
           history: emptyHistory(),
         };
       },
-      onRehydrateStorage: () => () => useMapStore.setState({ hydrated: true }),
+      onRehydrateStorage: () => () => {
+        // A `#m=` link opens on top of the saved state, before the first paint.
+        if (typeof window !== "undefined") useMapStore.getState().openLink(window.location.hash);
+        useMapStore.setState({ hydrated: true });
+      },
     },
   ),
 );
