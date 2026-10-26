@@ -176,6 +176,7 @@ export function NodeEditor({ map, ctx }: { map: SystemMap; ctx: NodeContext }) {
         {(props) => (
           <Input
             {...props}
+            className="max-md:h-10"
             data-testid="field-title"
             value={title.value}
             onChange={(e) => title.onChange(e.target.value)}
@@ -261,7 +262,7 @@ export function NodeEditor({ map, ctx }: { map: SystemMap; ctx: NodeContext }) {
                 edit({ type: "updateNode", id: node.id, patch: { preview } });
               }}
             >
-              <SelectTrigger id={props.id} className="w-full max-md:h-10" data-testid="field-preview-type">
+              <SelectTrigger id={props.id} className="w-full max-md:data-[size=default]:h-10" data-testid="field-preview-type">
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
@@ -333,7 +334,7 @@ export function NodeEditor({ map, ctx }: { map: SystemMap; ctx: NodeContext }) {
               Conectar con…
             </Label>
             <Select value={target} onValueChange={setTarget}>
-              <SelectTrigger id={`${node.id}-connect`} className="w-full max-md:h-10" data-testid="connect-target">
+              <SelectTrigger id={`${node.id}-connect`} className="w-full max-md:data-[size=default]:h-10" data-testid="connect-target">
                 <SelectValue placeholder="Elige un nodo" />
               </SelectTrigger>
               <SelectContent>
@@ -346,7 +347,7 @@ export function NodeEditor({ map, ctx }: { map: SystemMap; ctx: NodeContext }) {
             </Select>
             <div className="flex gap-1.5">
               <Select value={connectType} onValueChange={(v) => setTargetType(EDGE_TYPES.find((t) => t === v) ?? "")}>
-                <SelectTrigger className="flex-1 max-md:h-10" aria-label="Tipo de conexión" data-testid="connect-type">
+                <SelectTrigger className="flex-1 max-md:data-[size=default]:h-10" aria-label="Tipo de conexión" data-testid="connect-type">
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
@@ -395,7 +396,11 @@ export function NodeEditor({ map, ctx }: { map: SystemMap; ctx: NodeContext }) {
         >
           <Trash2 /> Borrar nodo
         </Button>
-        <Button variant="link" size="sm" className="self-start px-0 text-muted-foreground" onClick={() => select(node.id, { center: true })}>
+        <Button
+          variant="link"
+          size="sm"
+          className="self-start px-0 text-muted-foreground max-md:h-10"
+          onClick={() => select(node.id, { center: true })}>
           Centrar en el canvas
         </Button>
       </div>
@@ -408,7 +413,7 @@ export function EdgeEditor({ map, index }: { map: SystemMap; index: number }) {
   const edit = useMapStore((s) => s.edit);
   const select = useMapStore((s) => s.select);
   const label = useValidatedField(edge?.label ?? "", EdgeSchema.shape.label, (value) =>
-    edit({ type: "updateEdge", index, patch: { label: value } }, { key: `edge:${index}:label` }),
+    edit({ type: "updateEdge", index, patch: { label: value } }, { key: `edge:${edge?.from}->${edge?.to}:label` }),
   );
   if (!edge) return null;
   const byId = new Map(map.nodes.map((n) => [n.id, n]));
@@ -459,6 +464,7 @@ export function EdgeEditor({ map, index }: { map: SystemMap; index: number }) {
         {(props) => (
           <Input
             {...props}
+            className="max-md:h-10"
             data-testid="field-edge-label"
             value={label.value}
             onChange={(e) => label.onChange(e.target.value)}
@@ -501,6 +507,7 @@ export function MapSettings({ map, onAddNode }: { map: SystemMap; onAddNode: () 
         {(props) => (
           <Input
             {...props}
+            className="max-md:h-10"
             data-testid="field-map-title"
             value={title.value}
             onChange={(e) => title.onChange(e.target.value)}

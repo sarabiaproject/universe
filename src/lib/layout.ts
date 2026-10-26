@@ -19,6 +19,10 @@ type Lane = { side: 1 | -1; index: number; from: number; to: number };
  * Edge cases always go below.
  */
 export function layoutMap(map: SystemMap): Record<string, Point> {
+  // Edited maps fix every position: skip dagre (it would run on every keystroke).
+  if (map.nodes.every((n) => n.position)) {
+    return Object.fromEntries(map.nodes.map((n) => [n.id, n.position!]));
+  }
   const g = new dagre.graphlib.Graph();
   g.setGraph({ rankdir: "LR", ranksep: RANK_SEP, nodesep: 32 });
   g.setDefaultEdgeLabel(() => ({}));

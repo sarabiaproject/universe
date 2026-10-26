@@ -66,9 +66,14 @@ export function applyEdit(map: SystemMap, action: EditAction): SystemMap {
       if (!map.nodes.some((n) => n.id === id)) return map;
       const prev = map.edges.find((e) => e.type === "main" && e.to === id)?.from;
       const next = map.edges.find((e) => e.type === "main" && e.from === id)?.to;
-      const edges = map.edges.filter((e) => e.from !== id && e.to !== id);
-      if (prev && next && prev !== next && !edges.some((e) => e.from === prev && e.to === next)) {
-        edges.push({ from: prev, to: next, type: "main" });
+      let edges = map.edges.filter((e) => e.from !== id && e.to !== id);
+      if (prev && next && prev !== next) {
+        const forward = edges.findIndex((e) => e.from === prev && e.to === next);
+        const backward = edges.some((e) => e.from === next && e.to === prev);
+        // Rejoin the chain: promote an existing prev → next edge, or add one, unless
+        // next → prev already exists (a pair in both directions is never allowed).
+        if (forward >= 0) edges = edges.map((e, i) => (i === forward ? { ...e, type: "main" } : e));
+        else if (!backward) edges.push({ from: prev, to: next, type: "main" });
       }
       return { ...map, nodes: map.nodes.filter((n) => n.id !== id), edges };
     }
@@ -112,14 +117,24 @@ export function connectionError(map: SystemMap, from: string, to: string): strin
   return null;
 }
 
-/** Edge type suggested for a new connection: extends the main path when it can. */
+/**
+ * Edge type suggested for a new connection: "main" only when it extends the chain,
+ * i.e. `from` ends a chain, `to` starts one, and `to` is not upstream of `from`
+ * (that would close a loop).
+ */
 export function suggestedEdgeType(map: SystemMap, from: string, to: string): EdgeType {
   const byId = new Map(map.nodes.map((n) => [n.id, n]));
   const source = byId.get(from);
   const target = byId.get(to);
+  const mainIn = new Map(map.edges.filter((e) => e.type === "main").map((e) => [e.to, e.from]));
   const hasOut = map.edges.some((e) => e.type === "main" && e.from === from);
-  const hasIn = map.edges.some((e) => e.type === "main" && e.to === to);
-  return source?.track === "main" && target?.track === "main" && !hasOut && !hasIn ? "main" : "branch";
+  if (source?.track !== "main" || target?.track !== "main" || hasOut || mainIn.has(to)) return "branch";
+  const seen = new Set<string>();
+  for (let id: string | undefined = from; id !== undefined && !seen.has(id); id = mainIn.get(id)) {
+    if (id === to) return "branch";
+    seen.add(id);
+  }
+  return "main";
 }
 
 /** Readable, unique id from a title: "Pago fallido" → "pago-fallido", "pago-fallido-2", … */

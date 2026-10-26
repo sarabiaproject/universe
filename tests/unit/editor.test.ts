@@ -85,6 +85,19 @@ describe("applyEdit", () => {
     expect(parseSystemMap(map).ok).toBe(true);
   });
 
+  it("deleting a middle node promotes an existing prev → next branch instead of leaving a gap (O3)", () => {
+    const withBranch = { ...chain, edges: [...chain.edges, { from: "a", to: "c", type: "branch" as const }] };
+    const map = applyEdit(withBranch, { type: "deleteNode", id: "b" });
+    expect(map.edges).toEqual([{ from: "a", to: "c", type: "main" }]);
+    expect(parseSystemMap(map).ok).toBe(true);
+  });
+
+  it("deleting a middle node does not add a pair in both directions (O3)", () => {
+    const back = { ...chain, edges: [...chain.edges, { from: "c", to: "a", type: "branch" as const }] };
+    const map = applyEdit(back, { type: "deleteNode", id: "b" });
+    expect(map.edges).toEqual([{ from: "c", to: "a", type: "branch" }]);
+  });
+
   it("main edges promote both ends to the main path", () => {
     const map = applyEdit(
       { ...chain, nodes: [...chain.nodes, n("d", "branch")] },
@@ -124,6 +137,21 @@ describe("editor helpers", () => {
     expect(suggestedEdgeType(withBranch, "c", "d")).toBe("main");
     expect(suggestedEdgeType(withBranch, "a", "d")).toBe("branch");
     expect(suggestedEdgeType(withBranch, "c", "x")).toBe("branch");
+  });
+
+  it("never suggests a main edge that closes a loop (D4)", () => {
+    // a → b → c; dragging c → a would make the chain a cycle.
+    expect(suggestedEdgeType(chain, "c", "a")).toBe("branch");
+    expect(suggestedEdgeType(chain, "c", "b")).toBe("branch");
+    expect(mapProblems(applyEdit(chain, { type: "addEdge", edge: { from: "c", to: "a", type: "branch" } }))).toEqual([]);
+    // Joining two separate chains end-to-start is still a main edge.
+    const two: SystemMap = {
+      ...chain,
+      nodes: [...chain.nodes, n("d", "main", 900), n("e", "main", 1200)],
+      edges: [...chain.edges, { from: "d", to: "e", type: "main" }],
+    };
+    expect(suggestedEdgeType(two, "c", "d")).toBe("main");
+    expect(suggestedEdgeType(two, "e", "a")).toBe("main");
   });
 
   it("builds readable unique ids", () => {

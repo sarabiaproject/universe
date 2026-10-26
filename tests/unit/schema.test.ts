@@ -207,6 +207,15 @@ describe("SystemMap schema", () => {
       expect(mapProblems(map).join(" ")).toContain("«Suelto»");
     });
 
+    it("drafts keep id and reference rules (O2)", () => {
+      const dup = { ...valid, nodes: [valid.nodes[0], { ...valid.nodes[1], id: "a" }], edges: [] };
+      expect(parseDraftMap(dup).ok).toBe(false);
+      const dangling = { ...valid, edges: [{ from: "a", to: "zz", type: "branch" }] };
+      expect(parseDraftMap(dangling).ok).toBe(false);
+      const loop = { ...valid, edges: [{ from: "a", to: "a", type: "branch" }] };
+      expect(parseDraftMap(loop).ok).toBe(false);
+    });
+
     it("drafts skip the graph rules but keep the field rules", () => {
       const broken = { ...valid, edges: [] };
       expect(parseSystemMap(broken).ok).toBe(false);

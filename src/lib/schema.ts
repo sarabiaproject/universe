@@ -30,8 +30,9 @@ export const EdgeSchema = z.strictObject({
 });
 
 /**
- * Field and type rules only. Maps in "Mis mapas" are stored with this schema so a
- * work in progress (e.g. a main node not yet chained) survives a reload.
+ * Field, id and reference rules, without the main path rules. Maps in "Mis mapas"
+ * are stored with this schema so a work in progress (e.g. a main node not yet
+ * chained) survives a reload; ids and references are never transitional.
  */
 export const SystemMapDraftSchema = z.strictObject({
   version: z.literal(1),
@@ -39,10 +40,7 @@ export const SystemMapDraftSchema = z.strictObject({
   summary: z.string(),
   nodes: z.array(NodeSchema),
   edges: z.array(EdgeSchema),
-});
-
-/** Field rules plus the graph rules (ids, edges and a single main chain). */
-export const SystemMapSchema = SystemMapDraftSchema.superRefine((map, ctx) => {
+}).superRefine((map, ctx) => {
   const ids = new Set<string>();
   map.nodes.forEach((node, i) => {
     if (ids.has(node.id)) {
@@ -72,8 +70,10 @@ export const SystemMapSchema = SystemMapDraftSchema.superRefine((map, ctx) => {
       });
     }
   });
-  checkMainPath(map, ctx);
 });
+
+/** Draft rules plus a single main chain. Examples and imports must pass this one. */
+export const SystemMapSchema = SystemMapDraftSchema.superRefine((map, ctx) => checkMainPath(map, ctx));
 
 /**
  * The main path is drawn as a single row, so main nodes must form one chain:
