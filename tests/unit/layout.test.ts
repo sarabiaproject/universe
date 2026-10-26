@@ -75,4 +75,11 @@ describe("layoutMap", () => {
     };
     expect(layoutMap(map).a).toEqual({ x: 5, y: 7 });
   });
+
+  it("returns the stored positions as is when every node has one (no dagre, O5)", () => {
+    const map = BUNDLED_MAPS[1].map;
+    const fixed = { ...map, nodes: map.nodes.map((n, i) => ({ ...n, position: { x: i * 7, y: -i } })) };
+    const positions = layoutMap(fixed);
+    fixed.nodes.forEach((n, i) => expect(positions[n.id]).toEqual({ x: i * 7, y: -i }));
+  });
 });

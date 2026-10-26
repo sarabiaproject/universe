@@ -17,7 +17,7 @@ export type NodeContext = {
   total: number;
   /** Main node this branch hangs off (the node itself for main nodes). */
   anchor: MapNode | null;
-  parent: MapNode | null;
+  /** Main path: previous node. Branch: the node it hangs off. */
   prev: MapNode | null;
   next: MapNode | null;
   connections: Connection[];
@@ -91,7 +91,6 @@ export function getNodeContext(map: SystemMap, id: string): NodeContext | null {
       index,
       total: path.length,
       anchor: node,
-      parent: at(index - 1),
       prev: at(index - 1),
       next: at(index + 1),
       connections,
@@ -108,7 +107,6 @@ export function getNodeContext(map: SystemMap, id: string): NodeContext | null {
     index: null,
     total: path.length,
     anchor,
-    parent,
     prev: parent,
     next: anchorIndex >= 0 ? at(anchorIndex + 1) : null,
     connections,

@@ -18,7 +18,7 @@ export function NodePreview({
 
   switch (preview.type) {
     case "code":
-      return <pre className={cn(box, "truncate font-mono whitespace-pre-wrap", card && "line-clamp-2")}>{preview.content}</pre>;
+      return <pre className={cn(box, "overflow-hidden font-mono whitespace-pre-wrap break-words", card && "line-clamp-2")}>{preview.content}</pre>;
     case "list":
       return (
         <ul className={cn(box, "flex flex-col gap-0.5")}>

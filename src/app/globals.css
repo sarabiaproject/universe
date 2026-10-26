@@ -157,3 +157,11 @@
 .react-flow__attribution a {
   color: var(--muted-foreground);
 }
+/* Keyboard focus on an edge (edit mode): SVG <g> has no outline, so thicken the path (D2). */
+.react-flow__edge:focus-visible .react-flow__edge-path {
+  stroke: var(--foreground) !important;
+  stroke-width: 3px !important;
+}
+.react-flow__edge:focus-visible {
+  outline: none;
+}
