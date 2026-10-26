@@ -242,6 +242,15 @@ export function MapCanvas({
     if (refocus.nonce === lastRefocus.current) return;
     lastRefocus.current = refocus.nonce;
     const frame = requestAnimationFrame(() => {
+      // A modal is still open (the mobile editing Sheet): the canvas is behind it and
+      // aria-hidden, so keep focus in the modal instead of moving it out (D1-r2).
+      const modal = document.querySelector<HTMLElement>(
+        '[role="dialog"][data-state="open"], [role="alertdialog"][data-state="open"]',
+      );
+      if (modal) {
+        if (!modal.contains(document.activeElement)) modal.focus();
+        return;
+      }
       const container = containerRef.current;
       const target = refocus.nodeId
         ? container?.querySelector<HTMLElement>(`.react-flow__node[data-id="${CSS.escape(refocus.nodeId)}"]`)

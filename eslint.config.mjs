@@ -35,6 +35,11 @@ const eslintConfig = defineConfig([
     "out/**",
     "build/**",
     "next-env.d.ts",
+    // Local, git-ignored output (review scripts, logs, browsers).
+    ".check-logs/**",
+    ".playwright-browsers/**",
+    "test-results/**",
+    "playwright-report/**",
   ]),
 ]);
 

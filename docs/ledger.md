@@ -167,6 +167,29 @@ Revisión independiente en `~/dev/universe-review-s1/REVIEW-s1-round-1.md`: camb
 
 Desde cero: install, typecheck, lint, 87 tests unitarios (antes 69), build y 12 e2e (antes 9) en verde; greps vacíos; árbol limpio. Ver [checks.md](checks.md); logs en `.check-logs/s1-fix-r1/`.
 
+## 2026-10-26: Slice 1, revisión ronda 2 (rama `slice-1-editor`)
+
+Revisión independiente en `~/dev/universe-review-s1/REVIEW-s1-round-2.md`: cambios requeridos solo por D1-r2. Los arreglos de la ronda 1 quedaron verificados.
+
+### Qué se arregló
+
+- **D1-r2. En móvil, al borrar un nodo desde el Sheet, el foco salía del modal.**
+  - Causa: el efecto `refocus` (arreglo de D3) enfocaba un nodo del canvas que estaba detrás del Sheet, dentro de contenido `aria-hidden`. Desde ahí, Tab escapaba del modal y Suprimir proponía borrar un nodo oculto.
+  - Arreglo: mientras hay un diálogo abierto, el canvas no toma el foco; se queda en el diálogo, o vuelve a él si estaba fuera. En escritorio no cambia nada.
+  - Prueba: un e2e móvil nuevo que falló antes del arreglo. El e2e de escritorio de D3 sigue pasando.
+- **Foco al cerrar los diálogos del menú del mapa.** Renombrar (guardar o cancelar) y borrar un mapa devuelven el foco al botón "Acciones del mapa"; antes caía a `<body>`, porque el elemento del menú que los abrió ya no existe. Lo cubre el e2e de ejemplos.
+- **ESLint ignora `.check-logs/`, `.playwright-browsers/` y `test-results/`.** El primer `lint` del revisor falló por sus scripts en `.check-logs/`, que git ignora pero ESLint no.
+
+### Seguimientos (opcionales de la ronda 2)
+
+- **O1-r2**: el aviso de copia de seguridad solo aparece en la carga en que se hace la copia. Para el slice 2, añadir "Descargar copia" (en el aviso o en el menú de mapas) junto con importar/exportar JSON.
+- **O2-r2**: en escritorio, borrar una conexión con la papelera del panel lleva el foco al nodo origen en el canvas, no a la fila siguiente del panel. Se podría enfocar la fila siguiente cuando el borrado viene del panel.
+- **O3-r2**: aclarar en la documentación que `map-store.ts` accede al almacenamiento solo a través de `src/lib/storage.ts`.
+
+### Checks
+
+Desde cero: install, typecheck, lint, 87 tests unitarios, build y 13 e2e en verde; greps vacíos; árbol limpio. Ver [checks.md](checks.md); logs en `.check-logs/s1-fix-r2/`.
+
 ## 2026-10-26: Slice 2, compartir (rama `slice-2-share`)
 
 Rama creada desde `origin/slice-1-editor` (PR #2 sigue en revisión en otra sesión). Sin commits nuevos en `slice-1-editor` durante el trabajo, así que no hubo merge.
@@ -199,7 +222,7 @@ Rama creada desde `origin/slice-1-editor` (PR #2 sigue en revisión en otra sesi
 ### Temas abiertos
 
 - El aviso de 8000 caracteres es orientativo; no se probaron límites de apps concretas.
-- El diálogo de renombrar (slice 1) tampoco devuelve el foco al menú al cerrarse; no se tocó aquí para no pisar la ronda de revisión del slice 1.
+- ~~El diálogo de renombrar (slice 1) no devuelve el foco al menú~~: lo arregló la ronda 2 del slice 1 (traída con el merge de abajo).
 - Mobbin no se consultó en este slice; los patrones (diálogo de compartir con enlace y botón copiar, banner de solo lectura) siguen los componentes shadcn ya usados.
 
 ### Checks
@@ -209,6 +232,17 @@ Desde cero: install, typecheck, lint, 120 tests unitarios, build y 20 e2e (`E2E_
 ### Reporte final
 
 - **PR**: https://github.com/sarabiaproject/universe/pull/3 ("Slice 2: compartir", `slice-2-share` → `slice-1-editor`; se retargetea a `main` cuando se mergee #2). Sin merge, sin push a `main` ni a `slice-1-editor`, sin deploy ni comandos `vercel`; no se tocaron los servicios de los puertos 3100 y 3110.
+
+### Merge de `slice-1-editor` (ronda 2 del slice 1)
+
+Tras el APROBADO de la ronda 1 del slice 2, se mergeó `origin/slice-1-editor` (4 commits de la ronda 2) en `slice-2-share` con un merge normal, sin rebase ni force push. Conflictos:
+
+- `editor-chrome.tsx` (`MapMenu`): se conservan las dos cosas, el estado `"import"`, `empty` e `isReadOnly` del slice 2 y el `menuButton` / `returnFocus` de la ronda 2.
+- `docs/ledger.md` y `docs/checks.md`: se conservan las dos secciones; la ronda 2 del slice 1 va antes del slice 2 y checks.md refleja la corrida tras el merge.
+
+### Merge de `main` y cambio de base
+
+Con el PR #2 ya mergeado a `main` (`dcc8825`), se mergeó `origin/main` en `slice-2-share` (merge normal, sin conflictos y sin cambios de contenido: `main` ya tenía todo lo de `slice-1-editor`). Checks desde cero en verde: install, typecheck, lint, 120 unitarios, build, 21 e2e (`E2E_PORT=3120`), greps vacíos y árbol limpio (logs en `.check-logs/s2-main/`). La base del PR #3 pasó a `main`.
 
 ## 2026-10-26: Slice 3, lanzamiento (rama `slice-3-launch`)
 

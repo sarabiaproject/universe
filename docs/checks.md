@@ -95,6 +95,9 @@ $ playwright test        # 2.ª y 3.ª corridas
 - Ronda 1, almacenamiento bloqueado (B1): con el getter de `localStorage` lanzando `SecurityError`, el visor carga los 26 nodos sin error boundary, aparece el aviso, se puede crear y editar un mapa y no hay `pageerror`.
 - Ronda 1, dos pestañas (O10): A crea un mapa, B (abierta antes) crea otro; al recargar A están los dos.
 - Móvil 360×740: Editar sobre el ejemplo, sin overflow horizontal, botones de edición ≥ 40 px, edición desde el Sheet (título, selects, "Centrar en el canvas" y "Cerrar" ≥ 40 px, O6) y añadir/deshacer un nodo.
+- Ronda 2, móvil (D1-r2): borrar un nodo desde el Sheet deja el foco dentro del Sheet y fuera de contenido `aria-hidden`; Suprimir no abre el borrado de un nodo oculto y Tab no sale del Sheet. Fallaba antes del arreglo.
+- Ronda 2: renombrar (guardar o cancelar) y borrar un mapa devuelven el foco al botón "Acciones del mapa".
+
 **Compartir (Playwright, `tests/e2e/share.spec.ts`, slice 2)**
 
 - Compartir → contexto limpio → guardar: se crea un mapa de 3 nodos (con «ñ», emoji y `#?&=`), "Compartir" copia el enlace (se lee del portapapeles), Escape devuelve el foco al botón; en un `browser.newContext()` nuevo el enlace muestra el banner, modo Ver y 3 nodos; el JSON que exporta es idéntico (`toEqual`) al mapa guardado en el origen; no escribe nada en localStorage; "Guardar en mis mapas" lo guarda idéntico, pasa a Editar, limpia el hash y sobrevive a la recarga. Sin `pageerror`.

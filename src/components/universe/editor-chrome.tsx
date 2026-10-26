@@ -360,6 +360,13 @@ export function MapMenu() {
   const empty = useMapStore((s) => currentMap(s).nodes.length === 0);
   const bundled = isReadOnly(mapId);
   const [dialog, setDialog] = useState<"rename" | "delete" | "import" | "gallery" | null>(null);
+  // The dialogs open from a menu item that no longer exists when they close: send focus
+  // back to the menu button instead of letting it fall to <body>.
+  const menuButton = useRef<HTMLButtonElement>(null);
+  const returnFocus = (event: Event) => {
+    event.preventDefault();
+    menuButton.current?.focus();
+  };
   const [name, setName] = useState("");
   const nameError = dialog === "rename" ? checkTitle(name) : null;
 
@@ -368,6 +375,7 @@ export function MapMenu() {
       <DropdownMenu>
         <DropdownMenuTrigger asChild>
           <Button
+            ref={menuButton}
             variant="outline"
             size="icon-sm"
             className="bg-background max-md:size-10"
@@ -417,7 +425,7 @@ export function MapMenu() {
       </DropdownMenu>
 
       <Dialog open={dialog === "rename"} onOpenChange={(open) => !open && setDialog(null)}>
-        <DialogContent>
+        <DialogContent onCloseAutoFocus={returnFocus}>
           <form
             className="flex flex-col gap-4"
             onSubmit={(event) => {
@@ -468,7 +476,7 @@ export function MapMenu() {
       <ImportDialog open={dialog === "import"} onOpenChange={(open) => setDialog(open ? "import" : null)} />
 
       <AlertDialog open={dialog === "delete"} onOpenChange={(open) => !open && setDialog(null)}>
-        <AlertDialogContent>
+        <AlertDialogContent onCloseAutoFocus={returnFocus}>
           <AlertDialogHeader>
             <AlertDialogTitle>¿Borrar «{title}»?</AlertDialogTitle>
             <AlertDialogDescription>
