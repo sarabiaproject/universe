@@ -267,6 +267,113 @@ test.describe("editor (desktop)", () => {
   });
 });
 
+test.describe("editor (desktop, round 1 fixes)", () => {
+  test.use({ viewport: { width: 1440, height: 900 } });
+
+  test("keyboard: edges show focus and focus stays on the canvas after deletes (D2, D3)", async ({ page }) => {
+    await newMap(page);
+    await page.getByTestId("create-first-node").focus();
+    await page.keyboard.press("Enter");
+    await page.getByRole("button", { name: "Añadir paso siguiente" }).focus();
+    await page.keyboard.press("Enter");
+    await expect(page.locator(".react-flow__edge")).toHaveCount(1);
+
+    // Edges come before nodes in the tab order: Shift+Tab from the first node lands on the edge.
+    const first = node(page, "nuevo-nodo");
+    await first.focus();
+    await page.keyboard.press("Shift+Tab");
+    const edge = page.locator(".react-flow__edge");
+    await expect(edge).toBeFocused();
+    const width = () => edge.locator(".react-flow__edge-path").evaluate((el) => getComputedStyle(el).strokeWidth);
+    expect(await width()).toBe("3px");
+    await first.focus();
+    expect(await width()).not.toBe("3px");
+
+    // Delete the focused edge: focus goes to its source node.
+    await page.keyboard.press("Shift+Tab");
+    await page.keyboard.press("Delete");
+    await expect(page.locator(".react-flow__edge")).toHaveCount(0);
+    await expect(first).toBeFocused();
+    await page.keyboard.press("ControlOrMeta+z");
+    await expect(page.locator(".react-flow__edge")).toHaveCount(1);
+
+    // Delete a node with an edge through the confirmation, only with the keyboard:
+    // focus goes to the previous node on the path, not to <body>.
+    await node(page, "nuevo-nodo-2").focus();
+    await page.keyboard.press("Delete");
+    const confirm = page.getByRole("alertdialog");
+    await expect(confirm).toBeVisible();
+    await confirm.getByRole("button", { name: "Borrar nodo" }).focus();
+    await page.keyboard.press("Enter");
+    await expect(page.locator(".react-flow__node")).toHaveCount(1);
+    await expect(first).toBeFocused();
+
+    // Cancelling returns focus to the node.
+    await page.keyboard.press("ControlOrMeta+z");
+    await node(page, "nuevo-nodo-2").focus();
+    await page.keyboard.press("Delete");
+    await page.keyboard.press("Escape");
+    await expect(node(page, "nuevo-nodo-2")).toBeFocused();
+
+    // Last node: focus falls back to the canvas, with a visible ring.
+    await node(page, "nuevo-nodo-2").focus();
+    await page.keyboard.press("Delete");
+    await page.getByRole("alertdialog").getByRole("button", { name: "Borrar nodo" }).focus();
+    await page.keyboard.press("Enter");
+    await first.focus();
+    await page.keyboard.press("Delete");
+    await expect(page.locator(".react-flow__node")).toHaveCount(0);
+    const canvas = page.getByRole("group", { name: "Lienzo del mapa" });
+    await expect(canvas).toBeFocused();
+    expect(await canvas.evaluate((el) => getComputedStyle(el).outlineStyle)).not.toBe("none");
+  });
+
+  test("works with localStorage blocked: viewer, editing in memory and a warning (B1)", async ({ page }) => {
+    await page.addInitScript(() => {
+      Object.defineProperty(window, "localStorage", {
+        configurable: true,
+        get() {
+          throw new DOMException("The operation is insecure.", "SecurityError");
+        },
+      });
+    });
+    const errors: string[] = [];
+    page.on("pageerror", (e) => errors.push(e.message));
+    await page.goto("/");
+    await expect(page.locator(".react-flow__node")).toHaveCount(26);
+    await expect(page.getByText("Algo salió mal")).toHaveCount(0);
+    await expect(page.getByTestId("storage-warning")).toContainText("no se guardarán");
+
+    await page.getByRole("button", { name: "Acciones del mapa" }).click();
+    await page.getByRole("menuitem", { name: "Nuevo mapa" }).click();
+    await page.getByTestId("create-first-node").click();
+    await expect(page.locator(".react-flow__node")).toHaveCount(1);
+    await page.getByRole("button", { name: "Cerrar aviso" }).click();
+    await expect(page.getByTestId("storage-warning")).toHaveCount(0);
+    expect(errors).toEqual([]);
+  });
+
+  test("two tabs do not overwrite each other's maps (O10)", async ({ context }) => {
+    const a = await context.newPage();
+    const b = await context.newPage();
+    for (const p of [a, b]) {
+      await p.goto("/");
+      await node(p, "problema").waitFor();
+    }
+    // Tab A creates a map; tab B (opened before) creates another one afterwards.
+    await a.getByRole("button", { name: "Acciones del mapa" }).click();
+    await a.getByRole("menuitem", { name: "Nuevo mapa" }).click();
+    await expect(a.getByTestId("map-header")).toContainText("Mapa sin título");
+    await b.getByRole("button", { name: "Acciones del mapa" }).click();
+    await b.getByRole("menuitem", { name: "Nuevo mapa" }).click();
+    await expect(b.getByTestId("map-header")).toContainText("Mapa sin título 2");
+
+    await a.reload();
+    await node(a, "problema").or(a.getByTestId("empty-state")).first().waitFor();
+    expect((await stored(a)).state.userMaps.map((m) => m.map.title)).toEqual(["Mapa sin título", "Mapa sin título 2"]);
+  });
+});
+
 test.describe("editor (mobile)", () => {
   test.use({ viewport: { width: 360, height: 740 }, hasTouch: true, isMobile: true });
 
@@ -291,6 +398,17 @@ test.describe("editor (mobile)", () => {
     const sheet = page.getByRole("dialog");
     await sheet.getByTestId("field-title").fill("Problema (móvil)");
     await sheet.getByTestId("field-summary").fill("Editado desde el teléfono.");
+    // O6: the controls inside the edit Sheet are 40px touch targets too.
+    for (const target of [
+      sheet.getByTestId("field-title"),
+      sheet.getByTestId("field-preview-type"),
+      sheet.getByTestId("connect-target"),
+      sheet.getByTestId("connect-type"),
+      sheet.getByRole("button", { name: "Centrar en el canvas" }),
+      sheet.getByRole("button", { name: "Cerrar" }),
+    ]) {
+      expect((await target.boundingBox())?.height ?? 0).toBeGreaterThanOrEqual(40);
+    }
     await page.waitForTimeout(400); // Sheet slide-in
     await page.screenshot({ path: `${SHOTS}/editor-mobile-sheet.png` });
     await sheet.getByRole("button", { name: "Cerrar" }).click();
