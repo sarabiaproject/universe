@@ -114,3 +114,8 @@ Revisión independiente en `~/dev/universe-review/REVIEW-round-1.md`: cambios re
 - El historial no sobrevive a la recarga (pasa a post-MVP).
 - Los nodos nuevos no se colocan con dagre: van al centro visible (o a la derecha o debajo del nodo de origen) en el primer hueco libre.
 - Importar/exportar JSON, enlaces para compartir y exportar PNG quedan para el slice 2.
+
+### Reporte final
+
+- **PR**: https://github.com/sarabiaproject/universe/pull/2 ("Slice 1: editor", `slice-1-editor` → `main`). Sin merge, sin push a `main`, sin deploy y sin comandos `vercel`; no se tocó el servicio del puerto 3100.
+- **Checks**: install, typecheck, lint, 69 tests unitarios, build y 9 e2e (`E2E_PORT=3110`) en verde; greps vacíos; árbol limpio (ver [checks.md](checks.md)).
