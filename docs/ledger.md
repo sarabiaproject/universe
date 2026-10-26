@@ -205,3 +205,7 @@ Rama creada desde `origin/slice-1-editor` (PR #2 sigue en revisión en otra sesi
 ### Checks
 
 Desde cero: install, typecheck, lint, 120 tests unitarios, build y 20 e2e (`E2E_PORT=3120`) en verde; greps vacíos; árbol limpio. Ver [checks.md](checks.md); logs en `.check-logs/s2/`.
+
+### Reporte final
+
+- **PR**: https://github.com/sarabiaproject/universe/pull/3 ("Slice 2: compartir", `slice-2-share` → `slice-1-editor`; se retargetea a `main` cuando se mergee #2). Sin merge, sin push a `main` ni a `slice-1-editor`, sin deploy ni comandos `vercel`; no se tocaron los servicios de los puertos 3100 y 3110.
