@@ -1,6 +1,6 @@
 # Checks
 
-Último registro: 2026-10-26, rama `slice-3-launch`, fixes de la revisión ronda 1 (B1, D1). macOS (arm64), Node v26.7.0, pnpm 11.22.0. Ejecutado desde cero (`rm -rf node_modules .next test-results`), en este orden. El build corrió con `env -i HOME PATH` (sin variables de entorno). Logs en `.check-logs/s3-fix-r1/` (ignorado por git).
+Último registro: 2026-10-26, rama `slice-3-launch` tras mergear `origin/main` (`7101cce`, con los slices 1 y 2 ya mergeados), macOS (arm64), Node v26.7.0, pnpm 11.22.0. Ejecutado desde cero (`rm -rf node_modules .next test-results`), en este orden. El build corrió con `env -i HOME PATH` (sin variables de entorno). Logs en `.check-logs/s3-main/` (ignorado por git).
 
 | # | Comando | Resultado |
 | --- | --- | --- |
@@ -9,9 +9,13 @@
 | 2 | `pnpm lint` | ✅ exit 0 |
 | 3 | `pnpm test` | ✅ 12 archivos, 141 tests |
 | 4 | `env -i HOME="$HOME" PATH="$PATH" pnpm build` | ✅ exit 0, las 6 rutas estáticas |
-| 5 | `E2E_PORT=3140 pnpm test:e2e` | ✅ 28 pasan en la primera corrida (antes 27; nuevo: "map picker → Enter … (B1)") |
+| 5 | `E2E_PORT=3140 pnpm test:e2e` | ✅ 29 pasan en la primera corrida (28 de antes + "deleting a node from the Sheet keeps focus inside the Sheet (D1-r2)", que llega del slice 1 con el merge) |
 | 6 | Greps de REVIEW.md (colores, `any`/`@ts-ignore`/`eslint-disable`) y `localhost` en `src` | ✅ sin resultados |
-| 7 | `git status --short` después de los checks | ✅ solo los cambios de este commit; los tests no ensucian |
+| 7 | `git status --short` después de los checks | ✅ vacío |
+
+## Corrida anterior: fixes de la revisión ronda 1 (B1, D1)
+
+Mismos pasos, logs en `.check-logs/s3-fix-r1/`: todo en verde, con 141 unitarios y 28 e2e a la primera.
 
 **D1 falla sin el fix.** Con `example-gallery.tsx` sin cambios, el test nuevo falló 3 de 3 veces con `Expected substring: "Mi semana · 14 nodos"`, `Received: "universe · universe: el spec · 26 nodos"`. Con el fix pasa 3 de 3, junto al resto de `launch.spec.ts` (8/8).
 
@@ -57,9 +61,9 @@ Route (app)
 ├ ○ /opengraph-image
 └ ○ /twitter-image
 
-$ playwright test        # 2.ª y 3.ª corridas
+$ playwright test        # tras el merge de main
 [WebServer] $ next start --port 3140
-  27 passed (12.5s)
+  29 passed (16.0s)
 ```
 
 ## Qué cubre cada test

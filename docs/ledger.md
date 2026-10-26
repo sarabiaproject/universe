@@ -326,3 +326,21 @@ O1 a O6 de la revisión no se tocaron: el brief de esta ronda pide solo B1 y D1.
 ### Checks
 
 Desde cero: install, typecheck, lint, 141 unitarios, build sin variables de entorno y 28 e2e (`E2E_PORT=3140`) en verde a la primera; greps vacíos; árbol limpio. Ver [checks.md](checks.md); logs en `.check-logs/s3-fix-r1/`.
+
+## 2026-10-26: Slice 3, merge de `main` y cambio de base (rama `slice-3-launch`)
+
+El PR #3 ya se mergeó a `main` (`7101cce`). Se mergeó `origin/main` en `slice-3-launch` con un merge normal (`f343227`), sin rebase ni force push. Así entraron los 4 commits de la ronda 2 del slice 1 y los merges del slice 2.
+
+### Conflictos y cómo se resolvieron
+
+- **`src/components/universe/editor-chrome.tsx` (`MapMenu`, 1 hunk)**: se conservan los dos lados.
+  - Del slice 1 (ronda 2): `menuButton` (`ref` del botón `⋯`) y `returnFocus`, que usan los diálogos de renombrar y borrar para devolver el foco al menú.
+  - Del slice 3: `"gallery"` en la unión del estado `dialog`.
+  - El ítem "Ver ejemplos…", el `<ExampleGallery>` del menú y el del estado vacío se fusionaron solos. La galería del menú sigue devolviendo el foco con su selector `[data-testid="map-menu"]`, que es el mismo botón que `menuButton`.
+- **`docs/checks.md` (3 hunks)**: se tomó la versión del slice 3; el encabezado y la tabla se reescribieron con la corrida tras el merge.
+- **`docs/ledger.md` (1 hunk)**: se conservan las dos partes. Las secciones del slice 2 ("Merge de `slice-1-editor`" y "Merge de `main` y cambio de base") van antes de las del slice 3, en orden cronológico.
+- Después: sin marcadores de conflicto en el árbol (`git grep`). El resto (`eslint.config.mjs`, `map-canvas.tsx`, `editor.spec.ts`, README, roadmap, REVIEW.md) se fusionó sin conflictos.
+
+### Checks
+
+Desde cero, todo en verde a la primera: install, typecheck, lint, 141 unitarios, build sin variables de entorno y 29 e2e (`E2E_PORT=3140`, uno nuevo del slice 1); greps vacíos; árbol limpio. Ver [checks.md](checks.md); logs en `.check-logs/s3-main/`. La base del PR #4 pasa a `main`.
