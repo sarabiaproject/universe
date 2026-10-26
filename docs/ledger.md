@@ -259,3 +259,7 @@ Rama creada desde `origin/slice-2-share` (PR #3 sigue en revisión). `slice-2-sh
 - La imagen OG usa la fuente por defecto de `next/og`, no Geist: cargarla exigiría incluir el archivo de la fuente en el repo.
 - El enlace del diálogo "Compartir" en el GIF dice `localhost:3140`, porque se grabó en local.
 - Deploy a producción y anuncio quedan fuera (sin comandos `vercel`).
+
+### Reporte final
+
+- **PR**: https://github.com/sarabiaproject/universe/pull/4 ("Slice 3: lanzamiento", `slice-3-launch` → `slice-2-share`; se retargetea a `main` más adelante). Sin merge, sin push a `main`, `slice-1-editor` ni `slice-2-share`, sin deploy ni comandos `vercel`, sin dominios; no se tocaron los servicios de los puertos 3100 a 3130.
