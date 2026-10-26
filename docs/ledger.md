@@ -166,3 +166,26 @@ Revisión independiente en `~/dev/universe-review-s1/REVIEW-s1-round-1.md`: camb
 ### Checks
 
 Desde cero: install, typecheck, lint, 87 tests unitarios (antes 69), build y 12 e2e (antes 9) en verde; greps vacíos; árbol limpio. Ver [checks.md](checks.md); logs en `.check-logs/s1-fix-r1/`.
+
+## 2026-10-26: Slice 1, revisión ronda 2 (rama `slice-1-editor`)
+
+Revisión independiente en `~/dev/universe-review-s1/REVIEW-s1-round-2.md`: cambios requeridos solo por D1-r2. Los arreglos de la ronda 1 quedaron verificados.
+
+### Qué se arregló
+
+- **D1-r2. En móvil, al borrar un nodo desde el Sheet, el foco salía del modal.**
+  - Causa: el efecto `refocus` (arreglo de D3) enfocaba un nodo del canvas que estaba detrás del Sheet, dentro de contenido `aria-hidden`. Desde ahí, Tab escapaba del modal y Suprimir proponía borrar un nodo oculto.
+  - Arreglo: mientras hay un diálogo abierto, el canvas no toma el foco; se queda en el diálogo, o vuelve a él si estaba fuera. En escritorio no cambia nada.
+  - Prueba: un e2e móvil nuevo que falló antes del arreglo. El e2e de escritorio de D3 sigue pasando.
+- **Foco al cerrar los diálogos del menú del mapa.** Renombrar (guardar o cancelar) y borrar un mapa devuelven el foco al botón "Acciones del mapa"; antes caía a `<body>`, porque el elemento del menú que los abrió ya no existe. Lo cubre el e2e de ejemplos.
+- **ESLint ignora `.check-logs/`, `.playwright-browsers/` y `test-results/`.** El primer `lint` del revisor falló por sus scripts en `.check-logs/`, que git ignora pero ESLint no.
+
+### Seguimientos (opcionales de la ronda 2)
+
+- **O1-r2**: el aviso de copia de seguridad solo aparece en la carga en que se hace la copia. Para el slice 2, añadir "Descargar copia" (en el aviso o en el menú de mapas) junto con importar/exportar JSON.
+- **O2-r2**: en escritorio, borrar una conexión con la papelera del panel lleva el foco al nodo origen en el canvas, no a la fila siguiente del panel. Se podría enfocar la fila siguiente cuando el borrado viene del panel.
+- **O3-r2**: aclarar en la documentación que `map-store.ts` accede al almacenamiento solo a través de `src/lib/storage.ts`.
+
+### Checks
+
+Desde cero: install, typecheck, lint, 87 tests unitarios, build y 13 e2e en verde; greps vacíos; árbol limpio. Ver [checks.md](checks.md); logs en `.check-logs/s1-fix-r2/`.

@@ -1,6 +1,6 @@
 # Checks
 
-Último registro: 2026-10-26, rama `slice-1-editor` tras los arreglos de la revisión ronda 1 (HEAD `50b6ba1` más docs), macOS (arm64), Node v26.7.0, pnpm 11.22.0. Ejecutado desde cero (`rm -rf node_modules .next test-results`), en este orden. Logs en `.check-logs/s1-fix-r1/` (ignorado por git).
+Último registro: 2026-10-26, rama `slice-1-editor` tras los arreglos de la revisión ronda 2 (HEAD `1f49d3d` más docs), macOS (arm64), Node v26.7.0, pnpm 11.22.0. Ejecutado desde cero (`rm -rf node_modules .next test-results`), en este orden. Logs en `.check-logs/s1-fix-r2/` (ignorado por git; ESLint también lo ignora).
 
 | # | Comando | Resultado |
 | --- | --- | --- |
@@ -9,7 +9,7 @@
 | 2 | `pnpm lint` (`eslint`, incluye la regla que restringe `localStorage` a `src/lib/storage.ts`) | ✅ exit 0, sin warnings |
 | 3 | `pnpm test` (`vitest run`) | ✅ 7 archivos, 87 tests pasan (antes 69) |
 | 4 | `pnpm build` (`next build`) | ✅ exit 0, `/` prerenderizada como estática |
-| 5 | `E2E_PORT=3110 PLAYWRIGHT_BROWSERS_PATH=.playwright-browsers pnpm test:e2e` | ✅ 12 tests pasan (4 del visor, 8 del editor) |
+| 5 | `E2E_PORT=3110 PLAYWRIGHT_BROWSERS_PATH=.playwright-browsers pnpm test:e2e` | ✅ 13 tests pasan (4 del visor, 9 del editor) |
 | 6 | Colores hardcodeados: `grep -rnE '#[0-9a-fA-F]{3,8}\b\|rgba?\(\|oklch\(\|hsl\(' src \| grep -v globals.css` | ✅ sin resultados |
 | 7 | `grep -rnE ":\s*any\b\|as any\|@ts-ignore\|@ts-expect-error\|eslint-disable" src tests` | ✅ sin resultados |
 | 8 | `git status --short` después de todos los checks | ✅ vacío |
@@ -31,7 +31,7 @@ Route (app)
 
 $ playwright test
 [WebServer] $ next start --port 3110
-  12 passed (11.9s)
+  13 passed (13.4s)
 ```
 
 ## Qué cubre cada test
@@ -62,6 +62,8 @@ $ playwright test
 - Ronda 1, almacenamiento bloqueado (B1): con el getter de `localStorage` lanzando `SecurityError`, el visor carga los 26 nodos sin error boundary, aparece el aviso, se puede crear y editar un mapa y no hay `pageerror`.
 - Ronda 1, dos pestañas (O10): A crea un mapa, B (abierta antes) crea otro; al recargar A están los dos.
 - Móvil 360×740: Editar sobre el ejemplo, sin overflow horizontal, botones de edición ≥ 40 px, edición desde el Sheet (título, selects, "Centrar en el canvas" y "Cerrar" ≥ 40 px, O6) y añadir/deshacer un nodo.
+- Ronda 2, móvil (D1-r2): borrar un nodo desde el Sheet deja el foco dentro del Sheet y fuera de contenido `aria-hidden`; Suprimir no abre el borrado de un nodo oculto y Tab no sale del Sheet. Fallaba antes del arreglo.
+- Ronda 2: renombrar (guardar o cancelar) y borrar un mapa devuelven el foco al botón "Acciones del mapa".
 - Capturas: por defecto en `test-results/screenshots/` (ignorado). Con `UPDATE_SCREENSHOTS=1` se escriben en `docs/screenshots/`: `desktop-light.png`, `desktop-dark.png`, `desktop-keyboard-focus.png`, `mobile.png`, `mobile-sheet.png`, `editor-empty.png`, `editor-desktop.png`, `editor-dark.png`, `editor-ten-nodes.png`, `editor-mobile-sheet.png`. Se regeneraron así una vez en el slice 1 (cambió la vista inicial por O8 y el encabezado).
 
 ## Notas
