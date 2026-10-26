@@ -119,3 +119,50 @@ Revisión independiente en `~/dev/universe-review/REVIEW-round-1.md`: cambios re
 
 - **PR**: https://github.com/sarabiaproject/universe/pull/2 ("Slice 1: editor", `slice-1-editor` → `main`). Sin merge, sin push a `main`, sin deploy y sin comandos `vercel`; no se tocó el servicio del puerto 3100.
 - **Checks**: install, typecheck, lint, 69 tests unitarios, build y 9 e2e (`E2E_PORT=3110`) en verde; greps vacíos; árbol limpio (ver [checks.md](checks.md)).
+
+## 2026-10-26: Slice 1, revisión ronda 1 (rama `slice-1-editor`)
+
+Revisión independiente en `~/dev/universe-review-s1/REVIEW-s1-round-1.md`: cambios requeridos, con 1 bloqueante y 4 "debería".
+
+### Qué se arregló
+
+- **B1. Almacenamiento bloqueado tumbaba toda la app.**
+  - Causa: con `localStorage` lanzando `SecurityError`, `createJSONStorage` devolvía `undefined`, `persist` no instalaba su API y `rehydrate()` lanzaba.
+  - Arreglo: `src/lib/storage.ts` prueba el acceso y, si falla, cae a memoria; la app funciona y avisa "los cambios no se guardarán".
+  - El test unitario reprodujo el `TypeError` antes del arreglo. Hay además un e2e con el getter bloqueado.
+- **D1. Datos guardados ilegibles se perdían en silencio.**
+  - Arreglo: el JSON corrupto, otra versión o una entrada inválida se copian a `universe:backup-<hora>` antes de la siguiente escritura, con aviso visible.
+  - `migrate` declarado con `STORAGE_VERSION`.
+  - Un test unitario por caso.
+- **D2. Aristas sin foco visible.** `.react-flow__edge:focus-visible .react-flow__edge-path` las pinta en `--foreground` a 3 px. Lo cubre un e2e.
+- **D3. Foco a `<body>` tras borrar.**
+  - El store publica qué enfocar: el nodo anterior del camino, el origen de la arista, un vecino o el lienzo (`role="group"`, "Lienzo del mapa", con anillo).
+  - El diálogo de borrado no devuelve el foco al nodo borrado; al cancelar, sí vuelve al nodo.
+  - Lo cubren un e2e y un unitario.
+- **D4. Sugerencia "principal" que cerraba un ciclo.** `suggestedEdgeType` comprueba que el destino no esté aguas arriba del origen en la cadena. Lo cubre un unitario.
+- **Opcionales hechos:**
+  - **O2**: reglas de ids, referencias y auto-lazos en el esquema de borrador; `restore` descarta ids de mapa repetidos o de ejemplos, con copia.
+  - **O3**: borrar un nodo del medio promueve una rama `prev → next` existente y nunca crea pares en ambos sentidos.
+  - **O4**: una escritura rechazada por cuota avisa una vez.
+  - **O5**: sin dagre cuando todos los nodos tienen posición.
+  - **O6**: controles del Sheet de edición y "Cerrar" a 40 px.
+  - **O7**: la clave de agrupación de la etiqueta usa `from → to`.
+  - **O10**: evento `storage`; toma solo los mapas, conserva el mapa abierto y el modo de cada pestaña, y no reescribe si son iguales (evita el rebote entre pestañas).
+- **Error boundary**: ya no dice que los mapas "siguen guardados".
+
+### Para que no se repita (REVIEW.md y checks)
+
+- ESLint prohíbe `localStorage` y `sessionStorage` fuera de `src/lib/storage.ts` (`no-restricted-globals` y `no-restricted-properties`). Comprobado con un archivo de prueba: los dos accesos dan error.
+- REVIEW.md suma tres puntos: almacenamiento seguro, no perder datos en silencio (copia y `migrate`), y foco visible en aristas y conservado al borrar.
+- El foco visible ya había fallado en el slice 0 (B1 de esa ronda, en nodos). Ahora el e2e de teclado del editor también verifica aristas, el lienzo y el foco tras borrar.
+
+### Seguimientos (opcionales no hechos)
+
+- **O1**: un valor inválido sin confirmar se pierde al cambiar de nodo; se podría conservar el borrador por `nodo:campo` o avisar.
+- **O8'**: la vista inicial de "universe: el spec" queda al ~32% en escritorio. Es una decisión de producto: un `minZoom` para el ajuste inicial que priorice el camino principal.
+- **O9**: las aristas activas (`zIndex: 1`) pueden interceptar clics sobre un nodo si pasan por debajo de él. Ya pasaba en `main`.
+- **O10, límite**: dos pestañas editando el mismo mapa a la vez siguen con "gana la última escritura" a nivel de lista. El evento `storage` evita el caso de la revisión (una pestaña vieja que borra mapas nuevos), pero no fusiona ediciones simultáneas del mismo mapa.
+
+### Checks
+
+Desde cero: install, typecheck, lint, 87 tests unitarios (antes 69), build y 12 e2e (antes 9) en verde; greps vacíos; árbol limpio. Ver [checks.md](checks.md); logs en `.check-logs/s1-fix-r1/`.

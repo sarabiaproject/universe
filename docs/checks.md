@@ -1,54 +1,37 @@
 # Checks
 
-Último registro: 2026-10-26, rama `slice-1-editor` (HEAD `170c2ac` más docs), macOS (arm64), Node v26.7.0, pnpm 11.22.0. Ejecutado desde un árbol limpio (`rm -rf .next test-results`), en este orden.
+Último registro: 2026-10-26, rama `slice-1-editor` tras los arreglos de la revisión ronda 1 (HEAD `50b6ba1` más docs), macOS (arm64), Node v26.7.0, pnpm 11.22.0. Ejecutado desde cero (`rm -rf node_modules .next test-results`), en este orden. Logs en `.check-logs/s1-fix-r1/` (ignorado por git).
 
 | # | Comando | Resultado |
 | --- | --- | --- |
 | 0 | `pnpm install --frozen-lockfile` | ✅ exit 0, lockfile al día |
 | 1 | `pnpm typecheck` (`next typegen && tsc --noEmit`) | ✅ exit 0, sin errores |
-| 2 | `pnpm lint` (`eslint`) | ✅ exit 0, sin warnings |
-| 3 | `pnpm test` (`vitest run`) | ✅ 6 archivos, 69 tests pasan (antes 32) |
+| 2 | `pnpm lint` (`eslint`, incluye la regla que restringe `localStorage` a `src/lib/storage.ts`) | ✅ exit 0, sin warnings |
+| 3 | `pnpm test` (`vitest run`) | ✅ 7 archivos, 87 tests pasan (antes 69) |
 | 4 | `pnpm build` (`next build`) | ✅ exit 0, `/` prerenderizada como estática |
-| 5 | `E2E_PORT=3110 PLAYWRIGHT_BROWSERS_PATH=.playwright-browsers pnpm test:e2e` (`playwright test`, sobre `next start`) | ✅ 9 tests pasan (4 del visor, 5 del editor) |
+| 5 | `E2E_PORT=3110 PLAYWRIGHT_BROWSERS_PATH=.playwright-browsers pnpm test:e2e` | ✅ 12 tests pasan (4 del visor, 8 del editor) |
 | 6 | Colores hardcodeados: `grep -rnE '#[0-9a-fA-F]{3,8}\b\|rgba?\(\|oklch\(\|hsl\(' src \| grep -v globals.css` | ✅ sin resultados |
 | 7 | `grep -rnE ":\s*any\b\|as any\|@ts-ignore\|@ts-expect-error\|eslint-disable" src tests` | ✅ sin resultados |
-| 8 | `git status --short` después de todos los checks | ✅ vacío para archivos versionados: las capturas del e2e van a `test-results/` |
+| 8 | `git status --short` después de todos los checks | ✅ vacío |
 
-El puerto 3100 de esta máquina lo usa otro servicio, así que el e2e corrió con `E2E_PORT=3110` (O-N4). Sin la variable usa 3100.
+El puerto 3100 de esta máquina lo usa otro servicio, así que el e2e corrió con `E2E_PORT=3110`. `PLAYWRIGHT_BROWSERS_PATH=.playwright-browsers` apunta al Chromium instalado dentro del repo (en la caché global puede faltar la revisión que pide Playwright 1.64).
 
 ## Salida
 
 ```text
-$ next typegen && tsc --noEmit
-Generating route types...
-✓ Types generated successfully
-
-$ eslint
-
 $ vitest run
- Test Files  6 passed (6)
-      Tests  69 passed (69)
+ Test Files  7 passed (7)
+      Tests  87 passed (87)
 
 $ next build
-▲ Next.js 16.4.2 (Turbopack)
-✓ Compiled successfully in 1521ms
+✓ Compiled successfully
 Route (app)
 ┌ ○ /
 └ ○ /_not-found
-○  (Static)  prerendered as static content
 
 $ playwright test
 [WebServer] $ next start --port 3110
-  ✓  1 smoke.spec.ts › desktop › loads, selects nodes, navigates and toggles dark mode (2.7s)
-  ✓  2 editor.spec.ts › editor (desktop) › create a map, add 3 nodes, connect, edit, persist, undo/redo and delete (3.1s)
-  ✓  3 smoke.spec.ts › desktop › switches to the Share modal map (1.1s)
-  ✓  4 editor.spec.ts › editor (desktop) › builds a 10-node map with main path and branches that survives a reload (1.6s)
-  ✓  5 smoke.spec.ts › desktop › keyboard: header controls first, visible node focus, Enter/Space select (1.0s)
-  ✓  7 smoke.spec.ts › mobile › has no horizontal overflow at 360px and keeps navigation (1.3s)
-  ✓  6 editor.spec.ts › editor (desktop) › examples stay read-only; editing one makes a copy (2.1s)
-  ✓  8 editor.spec.ts › editor (desktop) › keyboard: create, move, delete and undo without a mouse (308ms)
-  ✓  9 editor.spec.ts › editor (mobile) › edits from the Sheet without horizontal overflow (1.1s)
-  9 passed (9.0s)
+  12 passed (11.9s)
 ```
 
 ## Qué cubre cada test
@@ -56,9 +39,10 @@ $ playwright test
 **Unit (vitest, `tests/unit/`)**
 
 - `schema.test.ts`: acepta un mapa válido y los dos mapas de ejemplo; rechaza `summary` > 140, tipos de arista/carril desconocidos, aristas a nodos inexistentes, ids duplicados, versión incorrecta y entradas que no son objetos. Estructura del camino principal: rechaza nodos `main` sin encadenar, dos cadenas separadas, bifurcaciones, dos aristas `main` entrantes, ciclos, aristas `main` que tocan nodos `branch`, auto-lazos e ids vacíos; recorta espacios en ids; acepta un solo nodo principal con ramas. Slice 1: rechaza claves desconocidas (`.strict()`), errores genéricos en español, título en blanco con mensaje propio, mapa vacío válido y mapa con nodos pero sin `main` inválido (O-N5), mensajes del camino principal con títulos y borradores (`parseDraftMap`) que saltan las reglas del grafo pero no las de campo.
-- `editor.test.ts`: el reductor `applyEdit` no muta la entrada; crear (suelto o conectado), editar campos y vista previa, cambiar de carril (las aristas `main` pasan a `branch`), mover con redondeo, borrar un nodo uniendo el camino principal, promoción a `main`, rechazo de auto-lazos, nodos inexistentes y conexiones duplicadas, editar y borrar aristas, título del mapa. Ayudas: tipo sugerido, ids legibles y únicos, primer nodo `main`, hueco libre y "Añadir paso siguiente". Historial: deshacer/rehacer, una edición nueva borra el rehacer, ediciones con la misma clave se agrupan, límite de 100 pasos.
-- `store.test.ts`: arranca en el primer ejemplo; crear mapa vacío en modo edición; los ejemplos nunca cambian y editarlos crea una copia con posiciones fijas; deshacer/rehacer de crear, editar, mover, conectar y borrar (con confirmación) paso a paso; escribir en un campo es un solo paso; la arista seleccionada sigue a sus extremos; borrar sin conexiones es inmediato; renombrar, duplicar y borrar mapas; cambiar de mapa reinicia selección e historial; persistencia en localStorage (mapa, mapa abierto y modo) y descarte de mapas guardados inválidos.
-- `layout.test.ts`: el camino principal queda ordenado de izquierda a derecha en una sola fila (ambos mapas); las ramas quedan fuera de esa fila y ningún par de tarjetas se superpone; los casos límite que salen del camino principal van abajo; las ramas arrancan a la derecha de su ancla; se respetan las posiciones explícitas.
+- `editor.test.ts`: el reductor `applyEdit` no muta la entrada; crear (suelto o conectado), editar campos y vista previa, cambiar de carril (las aristas `main` pasan a `branch`), mover con redondeo, borrar un nodo uniendo el camino principal, promoción a `main`, rechazo de auto-lazos, nodos inexistentes y conexiones duplicadas, editar y borrar aristas, título del mapa. Ayudas: tipo sugerido, ids legibles y únicos, primer nodo `main`, hueco libre y "Añadir paso siguiente". Ronda 1: no sugiere "principal" si cierra un ciclo (D4); al borrar un nodo del medio promueve una rama existente y no crea pares en ambos sentidos (O3). Historial: deshacer/rehacer, una edición nueva borra el rehacer, ediciones con la misma clave se agrupan, límite de 100 pasos.
+- `store-blocked-storage.test.ts` (B1): con un `localStorage` cuyo getter lanza `SecurityError`, el store hidrata, muestra los ejemplos, avisa que no se guardará y edita en memoria. Antes del arreglo fallaba con `TypeError: Cannot read properties of undefined (reading 'rehydrate')`.
+- `store.test.ts`: arranca en el primer ejemplo; crear mapa vacío en modo edición; los ejemplos nunca cambian y editarlos crea una copia con posiciones fijas; deshacer/rehacer de crear, editar, mover, conectar y borrar (con confirmación) paso a paso; escribir en un campo es un solo paso; la arista seleccionada sigue a sus extremos; borrar sin conexiones es inmediato; renombrar, duplicar y borrar mapas; cambiar de mapa reinicia selección e historial; persistencia en localStorage (mapa, mapa abierto y modo) y descarte de mapas guardados inválidos. Ronda 1: copia de seguridad y aviso con una entrada inválida, con JSON corrupto y con otra versión (D1); ids de mapa duplicados o de ejemplos (O2); escritura rechazada por cuota (O4); sincronización con otra pestaña sin rebote de escrituras y con reinicio del historial (O10); foco tras borrar (D3).
+- `layout.test.ts`: el camino principal queda ordenado de izquierda a derecha en una sola fila (ambos mapas); las ramas quedan fuera de esa fila y ningún par de tarjetas se superpone; los casos límite que salen del camino principal van abajo; las ramas arrancan a la derecha de su ancla; se respetan las posiciones explícitas; con todas las posiciones fijas no corre dagre (O5).
 - `navigation.test.ts`: anterior/siguiente en el camino principal (incluye extremos), en ramas (anterior = padre, siguiente = siguiente nodo principal tras el ancla), casos límite anidados, rama del último nodo, conexiones entrantes y salientes, etiquetas de posición ("3/9 · camino principal").
 - `markdown.test.ts`: párrafos, listas y marcas en línea.
 
@@ -74,7 +58,10 @@ $ playwright test
 - Un mapa de 10 nodos (7 principales y 3 ramas) sin problemas: tras recargar, el JSON guardado y las posiciones en pantalla son idénticos; en modo Ver la rama dice "rama de Paso 3".
 - Los ejemplos no cambian: Editar crea "(copia)" y avisa; el ejemplo sigue con "Problema"; renombrar y borrar la copia desde el menú.
 - Solo teclado: Enter en "Crear el primer nodo" y en "Añadir nodo", foco visible en el nodo, flechas lo mueven 5 px, Suprimir lo borra, ⌘/Ctrl+Z lo restaura y las dos flechas se deshacen como un paso.
-- Móvil 360×740: Editar sobre el ejemplo, sin overflow horizontal, botones de edición ≥ 40 px, edición desde el Sheet y añadir/deshacer un nodo.
+- Ronda 1, teclado (D2/D3): una arista enfocada dibuja su trazo a 3 px; tras borrar con Suprimir una arista o un nodo (confirmando el diálogo con teclado) el foco queda en el nodo origen o anterior; al cancelar vuelve al nodo; al borrar el último, al lienzo con anillo visible.
+- Ronda 1, almacenamiento bloqueado (B1): con el getter de `localStorage` lanzando `SecurityError`, el visor carga los 26 nodos sin error boundary, aparece el aviso, se puede crear y editar un mapa y no hay `pageerror`.
+- Ronda 1, dos pestañas (O10): A crea un mapa, B (abierta antes) crea otro; al recargar A están los dos.
+- Móvil 360×740: Editar sobre el ejemplo, sin overflow horizontal, botones de edición ≥ 40 px, edición desde el Sheet (título, selects, "Centrar en el canvas" y "Cerrar" ≥ 40 px, O6) y añadir/deshacer un nodo.
 - Capturas: por defecto en `test-results/screenshots/` (ignorado). Con `UPDATE_SCREENSHOTS=1` se escriben en `docs/screenshots/`: `desktop-light.png`, `desktop-dark.png`, `desktop-keyboard-focus.png`, `mobile.png`, `mobile-sheet.png`, `editor-empty.png`, `editor-desktop.png`, `editor-dark.png`, `editor-ten-nodes.png`, `editor-mobile-sheet.png`. Se regeneraron así una vez en el slice 1 (cambió la vista inicial por O8 y el encabezado).
 
 ## Notas

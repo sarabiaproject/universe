@@ -24,6 +24,7 @@ Sin IA, sin backend, sin login: todo corre en el navegador. Los mapas se editan 
 - **Borrar**: botón en el panel o Suprimir sobre el nodo o la flecha enfocados. Si el nodo tiene conexiones pide confirmación. Al borrar un nodo del medio del camino principal se unen su anterior y su siguiente.
 - **Deshacer / rehacer**: ⌘Z y ⇧⌘Z (Ctrl+Z, Ctrl+Shift+Z o Ctrl+Y en Windows y Linux) o los botones de la barra. Cubren crear, editar, mover, conectar y borrar. Escribir en un campo cuenta como un solo paso. El historial es por sesión: se reinicia al recargar o cambiar de mapa.
 - **Móvil**: en modo edición la barra inferior abre el panel en un Sheet.
+- **Guardado**: si el navegador no permite guardar (datos de sitio bloqueados) o el almacenamiento está lleno, la app sigue funcionando y lo avisa arriba. Si algún mapa guardado no se puede leer (por ejemplo, de otra versión), se guarda una copia en `universe:backup-<hora>` antes de sobrescribirlo. Con varias pestañas abiertas, cada una recibe los mapas que guarda la otra.
 
 ## Desarrollo
 
