@@ -6,18 +6,13 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
 import { KIND_LABEL, positionLabel, type NodeContext } from "@/lib/graph";
-import type { EdgeType, MapNode, SystemMap } from "@/lib/schema";
+import type { MapNode, SystemMap } from "@/lib/schema";
 import { cn } from "@/lib/utils";
 import { useMapStore } from "@/store/map-store";
 
+import { EDGE_LABEL } from "./labels";
 import { Markdown } from "./markdown";
 import { NodePreview } from "./node-preview";
-
-const EDGE_LABEL: Record<EdgeType, string> = {
-  main: "principal",
-  branch: "rama",
-  edge_case: "caso límite",
-};
 
 export function NavButtons({ ctx, compact = false }: { ctx: NodeContext; compact?: boolean }) {
   const select = useMapStore((s) => s.select);
@@ -77,7 +72,7 @@ export function NodeDetail({
           </span>
           <Badge
             variant="outline"
-            className={cn("shrink-0 font-normal", ctx.kind === "main" && "border-highlight/40 text-highlight")}
+            className="shrink-0 font-normal"
           >
             {KIND_LABEL[ctx.kind]}
           </Badge>
@@ -109,7 +104,7 @@ export function NodeDetail({
                   data-testid="connection-chip"
                   variant="outline"
                   size="xs"
-                  className="max-w-full font-normal"
+                  className="max-w-full font-normal max-md:h-10 max-md:px-3"
                   title={`${EDGE_LABEL[c.type]}${c.label ? ` · ${c.label}` : ""}`}
                   onClick={() => select(c.id, { center: true })}
                 >
