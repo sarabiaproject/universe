@@ -87,13 +87,15 @@ test.describe("desktop", () => {
     await page.goto("/");
     await settle(page);
 
-    // Tab order: skip link, map picker, map menu, mode and theme come before the canvas nodes.
+    // Tab order: skip link, map picker, map menu, share, mode and theme come before the canvas nodes.
     await page.keyboard.press("Tab");
     await expect(page.getByRole("link", { name: "Saltar al detalle" })).toBeFocused();
     await page.keyboard.press("Tab");
     await expect(page.getByTestId("map-picker")).toBeFocused();
     await page.keyboard.press("Tab");
     await expect(page.getByRole("button", { name: "Acciones del mapa" })).toBeFocused();
+    await page.keyboard.press("Tab");
+    await expect(page.getByRole("button", { name: "Compartir" })).toBeFocused();
     await page.keyboard.press("Tab");
     await expect(page.getByRole("radio", { name: "Ver" })).toBeFocused();
     await page.keyboard.press("Tab");
@@ -162,6 +164,7 @@ test.describe("mobile", () => {
       page.getByRole("button", { name: "Ajustar" }),
       page.getByRole("radio", { name: "Modo claro" }),
       page.getByTestId("map-picker"),
+      page.getByRole("button", { name: "Compartir" }),
       page.getByTestId("nav-prev"),
       page.getByTestId("nav-next"),
       page.getByRole("button", { name: "Detalle" }),

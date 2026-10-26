@@ -189,3 +189,57 @@ Revisión independiente en `~/dev/universe-review-s1/REVIEW-s1-round-2.md`: camb
 ### Checks
 
 Desde cero: install, typecheck, lint, 87 tests unitarios, build y 13 e2e en verde; greps vacíos; árbol limpio. Ver [checks.md](checks.md); logs en `.check-logs/s1-fix-r2/`.
+
+## 2026-10-26: Slice 2, compartir (rama `slice-2-share`)
+
+Rama creada desde `origin/slice-1-editor` (PR #2 sigue en revisión en otra sesión). Sin commits nuevos en `slice-1-editor` durante el trabajo, así que no hubo merge.
+
+### Qué se hizo
+
+- **Enlaces** (`src/lib/share.ts`): `encodeMap` / `shareUrl` comprimen el JSON con `lz-string` (`compressToEncodedURIComponent`) en `#m=`; `decodeShareHash` nunca lanza y da errores en español (enlace vacío, dañado o cortado, JSON inválido, esquema con ruta).
+- **Importar / exportar** (`src/lib/io.ts`): `parseImportText` (JSON roto con línea y columna), `parseImportValue`, `mapToJson` (esquema exacto, con sangría) y `slugify`.
+- **PNG** (`src/lib/export-image.ts`): `imageFrame` calcula la caja de todos los nodos con el mismo layout del canvas, más 48 px de margen, y `renderMapPng` dibuja el `.react-flow__viewport` con `html-to-image` a 2x (menos en mapas gigantes, tope 16 000 px), con el fondo del tema y sin conectores ni paneles.
+- **Store**: `openLink`, `saveShared`, `importMap`, `alert`/`showAlert`/`dismissAlert`, `announce`; `SHARED_ID` e `isReadOnly` (ejemplos y mapa compartido no se editan).
+- **UI** (`share-chrome.tsx`): botón "Compartir" con diálogo (enlace, estado del portapapeles, aviso > 8000), banner "Mapa compartido… Guardar en mis mapas", banner de error, diálogo "Importar JSON" (botón "Elegir archivo JSON…" y textarea), "Exportar JSON" y "Exportar PNG" en el menú `⋯`; grupo "Compartido (sin guardar)" en el selector.
+- **Tests**: 120 unitarios (antes 87) y 20 e2e (antes 12). Ver [checks.md](checks.md).
+
+### Decisiones
+
+- **El enlace se abre sobre el estado guardado y no se persiste.** Se lee en `onRehydrateStorage`, antes de la primera pintura. `partialize` guarda el mapa que estaba abierto antes, así que recargar sin hash vuelve a él. Al salir del mapa compartido (guardar, otro mapa) o si el enlace falla, se limpia el hash con `history.replaceState`. Un enlace pegado en una pestaña abierta se toma con `hashchange`.
+- **"Editar" sobre un mapa compartido** equivale a "Guardar en mis mapas" (igual que los ejemplos crean una copia).
+- **Importar y abrir enlaces aceptan borradores.** Un mapa que solo incumple las reglas del camino principal se acepta (como los de "Mis mapas") para que exportar → importar funcione siempre; abre en modo edición con los problemas listados. Los errores de campos, ids y referencias sí bloquean.
+- **Al guardar o importar** se fijan las posiciones que falten (como al duplicar) y el título se desambigua solo si ya existe ("X 2"). Un mapa con todas sus posiciones y título nuevo queda idéntico (lo comprueban los e2e).
+- **El enlace se copia al pulsar "Compartir"** y además se muestra en un diálogo: si el portapapeles no está disponible, el texto queda seleccionable con un mensaje.
+- **Selector de archivo propio**: el `<input type="file">` nativo dice "Choose File" en el idioma del navegador; se oculta y lo abre un botón en español.
+- **PNG con transform propio** en lugar de `getViewportForBounds`: a zoom 1 la imagen mide exactamente la caja de los nodos + margen, lo que permite comprobar en el e2e que están todos.
+
+### Problemas encontrados y resueltos
+
+1. Al cerrar el diálogo de compartir el foco iba a `<body>` (no había `DialogTrigger`). Ahora el botón es el trigger; el diálogo de importar, que se abre desde el menú, devuelve el foco a "Acciones del mapa".
+2. El textarea se marcaba inválido cuando el error venía del archivo. Ahora solo con errores del texto pegado.
+3. Navegar a la misma página con otro hash no recarga: el diálogo seguía abierto en el e2e móvil. Es el caso real de `hashchange`; el test cierra el diálogo antes.
+
+### Temas abiertos
+
+- El aviso de 8000 caracteres es orientativo; no se probaron límites de apps concretas.
+- ~~El diálogo de renombrar (slice 1) no devuelve el foco al menú~~: lo arregló la ronda 2 del slice 1 (traída con el merge de abajo).
+- Mobbin no se consultó en este slice; los patrones (diálogo de compartir con enlace y botón copiar, banner de solo lectura) siguen los componentes shadcn ya usados.
+
+### Checks
+
+Desde cero: install, typecheck, lint, 120 tests unitarios, build y 20 e2e (`E2E_PORT=3120`) en verde; greps vacíos; árbol limpio. Ver [checks.md](checks.md); logs en `.check-logs/s2/`.
+
+### Reporte final
+
+- **PR**: https://github.com/sarabiaproject/universe/pull/3 ("Slice 2: compartir", `slice-2-share` → `slice-1-editor`; se retargetea a `main` cuando se mergee #2). Sin merge, sin push a `main` ni a `slice-1-editor`, sin deploy ni comandos `vercel`; no se tocaron los servicios de los puertos 3100 y 3110.
+
+### Merge de `slice-1-editor` (ronda 2 del slice 1)
+
+Tras el APROBADO de la ronda 1 del slice 2, se mergeó `origin/slice-1-editor` (4 commits de la ronda 2) en `slice-2-share` con un merge normal, sin rebase ni force push. Conflictos:
+
+- `editor-chrome.tsx` (`MapMenu`): se conservan las dos cosas, el estado `"import"`, `empty` e `isReadOnly` del slice 2 y el `menuButton` / `returnFocus` de la ronda 2.
+- `docs/ledger.md` y `docs/checks.md`: se conservan las dos secciones; la ronda 2 del slice 1 va antes del slice 2 y checks.md refleja la corrida tras el merge.
+
+### Merge de `main` y cambio de base
+
+Con el PR #2 ya mergeado a `main` (`dcc8825`), se mergeó `origin/main` en `slice-2-share` (merge normal, sin conflictos y sin cambios de contenido: `main` ya tenía todo lo de `slice-1-editor`). Checks desde cero en verde: install, typecheck, lint, 120 unitarios, build, 21 e2e (`E2E_PORT=3120`), greps vacíos y árbol limpio (logs en `.check-logs/s2-main/`). La base del PR #3 pasó a `main`.

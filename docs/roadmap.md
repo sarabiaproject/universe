@@ -10,7 +10,7 @@
 - Modo claro/oscuro. Móvil: barra inferior + Sheet de detalle.
 - Dos mapas de ejemplo: "universe: el spec" y "Share modal".
 
-## Slice 1: edición ✅ (este PR)
+## Slice 1: edición ✅ (PR #2)
 
 - Modo Ver / Editar; los ejemplos son de solo lectura y se duplican para editarlos.
 - Crear, editar, mover (posición en `position`), conectar (arrastrando, con tipo) y borrar nodos y aristas; confirmación al borrar un nodo con conexiones.
@@ -20,11 +20,13 @@
 - Estado vacío para mapas nuevos.
 - Limpieza de la revisión del slice 0: O1, O2, O3, O5, O7, O8, O9, O12, O-N1 a O-N5 y chips de conexión de 40 px en móvil.
 
-## Slice 2: compartir
+## Slice 2: compartir ✅ (este PR)
 
-- Enlaces para compartir con el mapa codificado y comprimido en la URL.
-- Importar y exportar JSON (validado con `parseSystemMap`; el error boundary de `error.tsx` ya está).
-- Exportar PNG del canvas.
+- "Compartir": enlace con el mapa comprimido en el hash (`#m=`, lz-string), copiado al portapapeles; aviso por encima de 8000 caracteres.
+- Abrir un enlace: modo Ver de solo lectura, sin guardar; "Guardar en mis mapas" crea una copia editable. Enlaces dañados o inválidos muestran el error y la app sigue.
+- Importar JSON (archivo o texto pegado) validado con Zod, errores en español con la ruta; crea un mapa nuevo en "Mis mapas".
+- Exportar JSON (`<slug>.json`, esquema exacto) y PNG de todo el mapa (2x, fondo del tema).
+- Todo con teclado y `aria` en español.
 
 ## Lanzamiento
 

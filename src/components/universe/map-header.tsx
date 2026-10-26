@@ -6,7 +6,15 @@ const LEGEND: { type: EdgeType; label: string; dash?: string; opacity?: number }
   { type: "edge_case", label: "caso límite", dash: "1 4", opacity: 0.7 },
 ];
 
-export function MapHeader({ map, editing, example }: { map: SystemMap; editing: boolean; example: boolean }) {
+export function MapHeader({
+  map,
+  editing,
+  source,
+}: {
+  map: SystemMap;
+  editing: boolean;
+  source: "example" | "shared" | "user";
+}) {
   return (
     <div className="pointer-events-auto flex max-w-[min(26rem,calc(100vw-2rem))] flex-col gap-1.5 rounded-lg bg-background/80 p-1 backdrop-blur-sm">
       <h1 data-testid="map-header" className="truncate text-sm">
@@ -19,9 +27,11 @@ export function MapHeader({ map, editing, example }: { map: SystemMap; editing: 
       <p className="text-xs leading-snug text-muted-foreground">
         {editing
           ? "Editando: arrastra las tarjetas y une sus puntos para conectarlas."
-          : example
+          : source === "example"
             ? "Ejemplo de solo lectura. Sigue una rama y abre cada nodo."
-            : "Sigue una rama y abre cada nodo. Arrastra para moverte, clic en un nodo."}
+            : source === "shared"
+              ? "Mapa compartido de solo lectura. Sigue una rama y abre cada nodo."
+              : "Sigue una rama y abre cada nodo. Arrastra para moverte, clic en un nodo."}
       </p>
       <ul className="flex flex-wrap items-center gap-x-3 gap-y-1 text-[11px] text-muted-foreground" aria-label="Leyenda">
         {LEGEND.map((item) => (
