@@ -17,10 +17,33 @@ const geistMono = Geist_Mono({
   subsets: ["latin"],
 });
 
+// Production URL: absolute URLs for Open Graph and Twitter. Without an env var, so the
+// default Vercel build works as is; previews also point their cards here.
+const SITE_URL = "https://universe-gamma-eosin.vercel.app";
+const DESCRIPTION =
+  "Mapea cualquier sistema como un mapa explorable: nodos conectados, cada uno con su explicación. Sin backend, sin IA, código abierto.";
+
 export const metadata: Metadata = {
-  title: "universe",
-  description:
-    "Mapas universales de sistemas: un canvas minimalista de nodos conectados, cada uno con su explicación.",
+  metadataBase: new URL(SITE_URL),
+  title: { default: "universe: mapas universales de sistemas", template: "%s · universe" },
+  description: DESCRIPTION,
+  applicationName: "universe",
+  authors: [{ name: "Santiago Sarabia" }],
+  keywords: ["mapa", "diagrama", "sistemas", "flujo", "canvas", "nodos", "código abierto"],
+  alternates: { canonical: "/" },
+  openGraph: {
+    type: "website",
+    locale: "es_ES",
+    url: "/",
+    siteName: "universe",
+    title: "universe: mapas universales de sistemas",
+    description: DESCRIPTION,
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "universe: mapas universales de sistemas",
+    description: DESCRIPTION,
+  },
 };
 
 export const viewport: Viewport = {
