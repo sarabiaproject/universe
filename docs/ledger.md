@@ -75,3 +75,42 @@ Revisión independiente en `~/dev/universe-review/REVIEW-round-1.md`: cambios re
 
 `pnpm install --frozen-lockfile`, `typecheck`, `lint`, `test` (32/32), `build` y `test:e2e` (4/4) en verde desde un árbol limpio; grep de colores vacío; `git status` limpio tras los tests. Detalle en [checks.md](checks.md).
 
+
+## 2026-10-26: Slice 1, editor (rama `slice-1-editor`)
+
+### Qué se hizo
+
+- **Núcleo de edición** (`src/lib/editor.ts`): `applyEdit`, un reductor puro con acciones para crear, editar, mover, borrar y conectar nodos, editar y borrar aristas y editar el mapa. Historial de deshacer/rehacer con límite de 100 pasos y agrupación por campo (escribir un título es un solo paso).
+- **Store** (`src/store/map-store.ts`): "Mis mapas" en localStorage con `zustand/persist` (clave `universe`), validados con Zod al leerlos. Crear, renombrar, duplicar y borrar. Modo Ver/Editar, selección de nodo o arista, confirmación de borrado e historial del mapa abierto.
+- **UI**: interruptor Ver/Editar, menú del mapa (`⋯`), selector con grupos "Mis mapas" y "Ejemplos (solo lectura)", barra de edición (añadir, deshacer, rehacer), estado vacío, diálogo de tipo de conexión, confirmación de borrado e inspector (nodo, arista y mapa) con validación en vivo y lista de problemas del grafo. En móvil, el inspector va en el Sheet.
+- **Componentes shadcn nuevos**: dialog, alert-dialog, dropdown-menu, input, textarea y label. El overlay usa `bg-foreground/10` y "Close" pasó a "Cerrar".
+- **Limpieza de la revisión**: O1 (`z.config(z.locales.es())` y mensajes propios), O2 (`z.strictObject`), O3 (`src/app/error.tsx` con `retry`, la API de Next 16), O5 (fuera `NodeContext.parent` y los subcomponentes sin uso de `base-node`), O7 (la UI se monta tras leer localStorage: no hay flash del layout de escritorio en móvil), O8 (la vista inicial y "Ajustar" encuadran todo el mapa, ramas incluidas), O9 (acento solo en la selección y sus aristas, ya no en vecinos ni en el badge), O12 (vista previa de código con `whitespace-pre-wrap` y `line-clamp-2`), O-N1 (padding del enlace de salto), O-N2 (descripciones de aristas, nodos movidos y aristas en español), O-N3 (el enlace de salto enfoca el viewport que hace scroll), O-N4 (`E2E_PORT`), O-N5 (ver decisiones) y chips de conexión de 40 px en móvil.
+- **Tests**: 69 unitarios (antes 32) y 9 e2e (antes 4). Ver [checks.md](checks.md).
+
+### Decisiones
+
+- **Los ejemplos no se editan nunca.** Pulsar "Editar" sobre un ejemplo crea "… (copia)" en "Mis mapas" y abre la copia en modo edición, con un aviso por `role="status"`. Al duplicar se fijan las posiciones del layout automático, así arrastrar un nodo no mueve a los demás.
+- **Los borradores pueden incumplir las reglas del grafo.** Insertar un paso en medio del camino principal pasa por estados inválidos (un nodo `main` suelto), y bloquearlos haría imposible editar. Por eso hay dos esquemas: `SystemMapDraftSchema` (campos y tipos) para guardar y `SystemMapSchema` (más las reglas del grafo) para importar y para los ejemplos. El editor lista los problemas arriba del panel. Los campos (título, resumen ≤ 140, contenido de la vista previa) sí se validan antes de guardar: un valor inválido se queda en el campo con su mensaje y no llega al mapa.
+- **Ediciones que mantienen el camino principal coherente**: una arista `main` convierte sus extremos en `main`; pasar un nodo a "Rama" convierte sus aristas `main` en `branch`; borrar un nodo del medio une su anterior con su siguiente. "Añadir paso siguiente" continúa el camino desde su último nodo o crea una rama.
+- **O-N5**: un mapa sin nodos es válido (es el estado vacío); un mapa con nodos necesita al menos uno `main`.
+- **O8**: se eligió encuadrar todo el mapa. "universe: el spec" arranca al ~32% en escritorio con "Preguntas abiertas" visible. En canvas angostos (< 640 px) se mantiene el ajuste a los 3 primeros nodos principales.
+- **Deshacer**: el historial es por sesión y por mapa; se reinicia al recargar o cambiar de mapa. Los atajos ⌘Z / ⇧⌘Z (Ctrl+Z / Ctrl+Shift+Z / Ctrl+Y) no actúan dentro de campos de texto, donde manda el deshacer nativo. Mover con flechas agrupa las pulsaciones seguidas en un paso; cada arrastre es un paso.
+- **Ids legibles**: los nodos nuevos reciben un id a partir del título inicial ("nuevo-nodo", "nuevo-nodo-2"); renombrar no cambia el id, para no romper aristas. Los mensajes del editor nombran los nodos por su título.
+- **Conexiones**: no se permiten auto-lazos, ni conexiones duplicadas o inversas entre el mismo par. El diálogo propone el tipo: "principal" si extiende la cadena, si no "rama".
+- **Hidratación**: `persist` con `skipHydration` y `rehydrate()` al montar; hasta entonces se muestra una pantalla neutra. Esto resuelve O7 y evita ver el ejemplo un instante antes del mapa guardado. React Flow se monta cuando su contenedor ya tiene tamaño (evita el warning #004 y un ajuste inicial con tamaño 0).
+- **Handles fuera de la tarjeta**: el `overflow-hidden` de la tarjeta recortaba la mitad del conector y hacía que al arrastrar se moviera el nodo en lugar de conectar.
+
+### Problemas encontrados y resueltos
+
+1. Al borrar una arista, la selección (un índice) pasaba a señalar otra arista, y deshacer mostraba el editor de una arista distinta. Ahora la selección sigue a sus extremos (`from → to`) tras cada edición y cada deshacer. Lo cubren un test unitario y el e2e.
+2. React Flow avisaba (#015) de que no podía arrastrar nodos sin medir: como son controlados, ahora se pasan con `measured`.
+3. Arrastrar desde el conector movía la tarjeta (conector recortado). Se resolvió sacando los `Handle` del contenedor recortado.
+4. `zustand/persist` captura `localStorage` al cargar el módulo; en vitest el falso se instala con `vi.hoisted`.
+
+### Temas abiertos
+
+- Mobbin se consultó para el patrón del editor (inspector con etiquetas a la derecha en AirOps y Klaviyo, Edit/Playground en fal, barra flotante con + y deshacer). No se guardaron colecciones.
+- Conectar arrastrando es solo con puntero; con teclado se conecta desde el panel ("Conectar con…"), que también es la vía en móvil.
+- El historial no sobrevive a la recarga (pasa a post-MVP).
+- Los nodos nuevos no se colocan con dagre: van al centro visible (o a la derecha o debajo del nodo de origen) en el primer hueco libre.
+- Importar/exportar JSON, enlaces para compartir y exportar PNG quedan para el slice 2.
