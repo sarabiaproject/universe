@@ -1,0 +1,128 @@
+{
+  "version": 1,
+  "title": "Mi semana",
+  "summary": "Una semana con foco, movimiento y descanso: el ritmo base, lo que la rompe y cómo volver sin culpa.",
+  "nodes": [
+    {
+      "id": "planear",
+      "title": "Domingo: planear",
+      "summary": "Veinte minutos el domingo por la noche para elegir tres prioridades y mirar el calendario.",
+      "details": "- Elegir **tres prioridades**, no diez.\n- Marcar las citas fijas: médico, cumpleaños, entregas.\n- Decidir qué se cocina el lunes y el martes.\n\nSi algo no entra en la semana, se anota para la próxima en vez de forzarlo.",
+      "preview": { "type": "list", "content": "1. Entregar el informe\n2. Correr 3 veces\n3. Llamar a mamá" },
+      "track": "main"
+    },
+    {
+      "id": "manana",
+      "title": "Mañanas: rutina base",
+      "summary": "Despertar a la misma hora, agua, estirar y veinte minutos sin pantalla antes de empezar.",
+      "details": "- La hora de despertar es la ancla: la de dormir se acomoda sola.\n- El teléfono se mira *después* del desayuno.\n- Una rutina corta que se cumple vale más que una larga que se salta.",
+      "preview": { "type": "list", "content": "07:00 despertar\nAgua y estirar\n20 min sin pantalla" },
+      "track": "main"
+    },
+    {
+      "id": "foco",
+      "title": "Bloques de foco",
+      "summary": "De lunes a jueves, la mañana es para la prioridad del día: notificaciones fuera y una sola tarea.",
+      "details": "- Dos bloques de 90 minutos con una pausa en medio.\n- Correo y mensajes recién al mediodía.\n- La prioridad del día sale de las tres del domingo.",
+      "preview": { "type": "metric", "content": "3 h al día" },
+      "track": "main"
+    },
+    {
+      "id": "moverse",
+      "title": "Moverse",
+      "summary": "Tres o cuatro sesiones cortas por semana, agendadas como cualquier otra cita.",
+      "details": "- Correr, bici o caminar rápido: lo que dé menos excusas.\n- Treinta minutos alcanzan.\n- Va en el calendario, no en la lista de pendientes.",
+      "preview": { "type": "metric", "content": "4 sesiones" },
+      "track": "main"
+    },
+    {
+      "id": "cierre",
+      "title": "Cierre del día",
+      "summary": "Antes de cenar se anota qué quedó pendiente y cuál es la primera tarea de mañana.",
+      "details": "- Tres líneas en una libreta: hecho, pendiente, primera tarea.\n- Pantallas fuera de la cama.\n- Así la mañana empieza sin decidir nada.",
+      "preview": { "type": "text", "content": "Mañana empiezo por: la sección 2 del informe." },
+      "track": "main"
+    },
+    {
+      "id": "revision",
+      "title": "Viernes: revisión",
+      "summary": "Quince minutos para mirar qué salió, qué no y por qué, sin juzgarse.",
+      "details": "- ¿Se cumplieron las tres prioridades?\n- ¿Qué robó más tiempo del que valía?\n- Una sola cosa para cambiar la semana que viene.",
+      "preview": { "type": "list", "content": "✓ Informe entregado\n✓ Correr ×3\n✗ Llamada pendiente" },
+      "track": "main"
+    },
+    {
+      "id": "descanso",
+      "title": "Fin de semana: descanso",
+      "summary": "Sábado sin trabajo: gente, aire libre y algo que no tenga que ser productivo.",
+      "details": "- Ver a alguien en persona.\n- Una actividad fuera de casa.\n- El domingo por la noche vuelve a empezar el ciclo.",
+      "track": "main"
+    },
+    {
+      "id": "semana-cargada",
+      "title": "Semana cargada",
+      "summary": "Si el calendario ya está lleno, se elige una sola prioridad y las otras esperan.",
+      "details": "- Una prioridad bien hecha antes que tres a medias.\n- Se cancela o delega lo que se pueda el mismo domingo.",
+      "track": "branch"
+    },
+    {
+      "id": "enfermo",
+      "title": "Me enfermo",
+      "summary": "Todo el plan pasa a modo mínimo: dormir, comer bien y una sola tarea si hay energía.",
+      "details": "- Se suspenden el ejercicio y los bloques de foco.\n- Se avisa temprano a quien espere algo.",
+      "preview": { "type": "text", "content": "Modo mínimo" },
+      "track": "branch"
+    },
+    {
+      "id": "volver",
+      "title": "Volver sin culpa",
+      "summary": "Al recuperarse se retoma la rutina base desde el día siguiente, sin compensar lo perdido.",
+      "details": "- No se duplican sesiones para \"ponerse al día\".\n- La revisión del viernes ajusta las prioridades.",
+      "track": "branch"
+    },
+    {
+      "id": "reunion",
+      "title": "Una reunión pisa el foco",
+      "summary": "El bloque de foco se mueve a la tarde, no se borra.",
+      "details": "- Proponer otro horario si la reunión puede esperar.\n- Si no, el bloque pasa a la tarde del mismo día.",
+      "preview": { "type": "ui", "content": "[Mover bloque a 15:00]" },
+      "track": "branch"
+    },
+    {
+      "id": "lluvia",
+      "title": "Lluvia o molestia",
+      "summary": "Plan B en casa: veinte minutos de fuerza o movilidad en lugar de salir.",
+      "details": "- Sentadillas, flexiones y plancha.\n- Si duele algo, solo movilidad y caminar.",
+      "track": "branch"
+    },
+    {
+      "id": "tarde",
+      "title": "Me acuesto tarde",
+      "summary": "Se mantiene la hora de despertar y se acorta la rutina; la siesta corta es válida.",
+      "details": "- Cambiar la hora de despertar desordena toda la semana.\n- Siesta de 20 minutos como máximo.",
+      "track": "branch"
+    },
+    {
+      "id": "pendientes",
+      "title": "Lo que no se hizo",
+      "summary": "Cada pendiente pasa a la próxima semana o se suelta a propósito.",
+      "details": "- Si lleva tres semanas sin moverse, se suelta o se parte en algo más chico.",
+      "track": "branch"
+    }
+  ],
+  "edges": [
+    { "from": "planear", "to": "manana", "type": "main", "label": "lunes" },
+    { "from": "manana", "to": "foco", "type": "main" },
+    { "from": "foco", "to": "moverse", "type": "main", "label": "tarde" },
+    { "from": "moverse", "to": "cierre", "type": "main" },
+    { "from": "cierre", "to": "revision", "type": "main", "label": "viernes" },
+    { "from": "revision", "to": "descanso", "type": "main" },
+    { "from": "planear", "to": "semana-cargada", "type": "branch", "label": "calendario lleno" },
+    { "from": "manana", "to": "enfermo", "type": "edge_case", "label": "fiebre" },
+    { "from": "enfermo", "to": "volver", "type": "branch", "label": "recuperado" },
+    { "from": "foco", "to": "reunion", "type": "branch", "label": "imprevisto" },
+    { "from": "moverse", "to": "lluvia", "type": "edge_case", "label": "no se puede salir" },
+    { "from": "cierre", "to": "tarde", "type": "edge_case", "label": "después de las 0:00" },
+    { "from": "revision", "to": "pendientes", "type": "branch" }
+  ]
+}

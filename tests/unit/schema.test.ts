@@ -33,8 +33,8 @@ describe("SystemMap schema", () => {
     expect(result.ok).toBe(true);
   });
 
-  it("validates both bundled maps", () => {
-    expect(BUNDLED_MAPS.map((m) => m.id)).toEqual(["universe-spec", "share-modal"]);
+  it("validates every bundled map", () => {
+    expect(BUNDLED_MAPS.map((m) => m.id)).toEqual(["universe-spec", "share-modal", "mi-semana", "lanzar-open-source"]);
     for (const { map } of BUNDLED_MAPS) expect(parseSystemMap(map).ok).toBe(true);
   });
 
