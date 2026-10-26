@@ -26,6 +26,14 @@ Sin IA, sin backend, sin login: todo corre en el navegador. Los mapas se editan 
 - **Móvil**: en modo edición la barra inferior abre el panel en un Sheet.
 - **Guardado**: si el navegador no permite guardar (datos de sitio bloqueados) o el almacenamiento está lleno, la app sigue funcionando y lo avisa arriba. Si algún mapa guardado no se puede leer (por ejemplo, de otra versión), se guarda una copia en `universe:backup-<hora>` antes de sobrescribirlo. Con varias pestañas abiertas, cada una recibe los mapas que guarda la otra.
 
+## Compartir, importar y exportar
+
+- **Compartir** (arriba a la derecha) copia un enlace con el mapa comprimido en el hash (`#m=…`, lz-string). No se sube nada a ningún servidor: el mapa viaja en la URL. Si el enlace pasa de 8000 caracteres, el diálogo avisa que algunas apps pueden cortarlo y sugiere exportar JSON.
+- **Abrir un enlace** muestra el mapa en modo Ver, de solo lectura, sin guardarlo. **Guardar en mis mapas** (o **Editar**) crea una copia en "Mis mapas" y la abre para editar. Un enlace dañado o un mapa inválido muestran el error arriba (con la ruta del campo, p. ej. `nodes.0.summary: …`) y la app sigue en el mapa que estaba abierto.
+- **Importar JSON…** (menú `⋯`): desde un archivo o pegando el texto. Se valida con el esquema Zod; los errores se listan en español con su ruta y nada se rompe. El mapa importado se añade a "Mis mapas" como uno nuevo. Un mapa que solo incumple las reglas del camino principal se importa igual (como un borrador) y abre en modo edición con los problemas listados.
+- **Exportar JSON** descarga `<slug>.json` con el esquema exacto (se puede volver a importar tal cual).
+- **Exportar PNG** descarga `<slug>.png` con todos los nodos del mapa, sin paneles ni controles, a 2x y con el fondo del tema (claro u oscuro).
+
 ## Desarrollo
 
 ```bash
@@ -37,13 +45,13 @@ pnpm typecheck    # tsc --noEmit
 pnpm test         # vitest: esquema, layout y navegación
 pnpm exec playwright install chromium   # una vez
 pnpm build && pnpm test:e2e   # playwright: smoke del visor y del editor (usa el build de producción)
-E2E_PORT=3110 pnpm test:e2e   # si el puerto 3100 está ocupado
+E2E_PORT=3120 pnpm test:e2e   # si el puerto 3100 está ocupado
 UPDATE_SCREENSHOTS=1 pnpm test:e2e   # regenera docs/screenshots (sin la variable, van a test-results/)
 ```
 
-Teclado: Tab recorre "Saltar al detalle", el selector de mapa, el menú del mapa, Ver/Editar y el tema, y luego los nodos del canvas (con anillo de foco); Enter o Espacio abren el nodo en el detalle. En modo edición: flechas mueven el nodo enfocado (Shift para pasos largos), Suprimir lo borra, Enter sobre una flecha la abre en el panel, y ⌘Z / ⇧⌘Z deshacen y rehacen fuera de los campos de texto.
+Teclado: Tab recorre "Saltar al detalle", el selector de mapa, el menú del mapa, Compartir, Ver/Editar y el tema, y luego los nodos del canvas (con anillo de foco); Enter o Espacio abren el nodo en el detalle. En modo edición: flechas mueven el nodo enfocado (Shift para pasos largos), Suprimir lo borra, Enter sobre una flecha la abre en el panel, y ⌘Z / ⇧⌘Z deshacen y rehacen fuera de los campos de texto.
 
-Stack: Next.js (App Router) + TypeScript estricto, shadcn/ui + Tailwind 4, `next-themes`, `@xyflow/react` + React Flow UI, dagre, zustand y Zod.
+Stack: Next.js (App Router) + TypeScript estricto, shadcn/ui + Tailwind 4, `next-themes`, `@xyflow/react` + React Flow UI, dagre, zustand, Zod, `lz-string` (enlaces) y `html-to-image` (PNG).
 
 ## Esquema `SystemMap`
 

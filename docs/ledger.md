@@ -166,3 +166,42 @@ Revisión independiente en `~/dev/universe-review-s1/REVIEW-s1-round-1.md`: camb
 ### Checks
 
 Desde cero: install, typecheck, lint, 87 tests unitarios (antes 69), build y 12 e2e (antes 9) en verde; greps vacíos; árbol limpio. Ver [checks.md](checks.md); logs en `.check-logs/s1-fix-r1/`.
+
+## 2026-10-26: Slice 2, compartir (rama `slice-2-share`)
+
+Rama creada desde `origin/slice-1-editor` (PR #2 sigue en revisión en otra sesión). Sin commits nuevos en `slice-1-editor` durante el trabajo, así que no hubo merge.
+
+### Qué se hizo
+
+- **Enlaces** (`src/lib/share.ts`): `encodeMap` / `shareUrl` comprimen el JSON con `lz-string` (`compressToEncodedURIComponent`) en `#m=`; `decodeShareHash` nunca lanza y da errores en español (enlace vacío, dañado o cortado, JSON inválido, esquema con ruta).
+- **Importar / exportar** (`src/lib/io.ts`): `parseImportText` (JSON roto con línea y columna), `parseImportValue`, `mapToJson` (esquema exacto, con sangría) y `slugify`.
+- **PNG** (`src/lib/export-image.ts`): `imageFrame` calcula la caja de todos los nodos con el mismo layout del canvas, más 48 px de margen, y `renderMapPng` dibuja el `.react-flow__viewport` con `html-to-image` a 2x (menos en mapas gigantes, tope 16 000 px), con el fondo del tema y sin conectores ni paneles.
+- **Store**: `openLink`, `saveShared`, `importMap`, `alert`/`showAlert`/`dismissAlert`, `announce`; `SHARED_ID` e `isReadOnly` (ejemplos y mapa compartido no se editan).
+- **UI** (`share-chrome.tsx`): botón "Compartir" con diálogo (enlace, estado del portapapeles, aviso > 8000), banner "Mapa compartido… Guardar en mis mapas", banner de error, diálogo "Importar JSON" (botón "Elegir archivo JSON…" y textarea), "Exportar JSON" y "Exportar PNG" en el menú `⋯`; grupo "Compartido (sin guardar)" en el selector.
+- **Tests**: 120 unitarios (antes 87) y 20 e2e (antes 12). Ver [checks.md](checks.md).
+
+### Decisiones
+
+- **El enlace se abre sobre el estado guardado y no se persiste.** Se lee en `onRehydrateStorage`, antes de la primera pintura. `partialize` guarda el mapa que estaba abierto antes, así que recargar sin hash vuelve a él. Al salir del mapa compartido (guardar, otro mapa) o si el enlace falla, se limpia el hash con `history.replaceState`. Un enlace pegado en una pestaña abierta se toma con `hashchange`.
+- **"Editar" sobre un mapa compartido** equivale a "Guardar en mis mapas" (igual que los ejemplos crean una copia).
+- **Importar y abrir enlaces aceptan borradores.** Un mapa que solo incumple las reglas del camino principal se acepta (como los de "Mis mapas") para que exportar → importar funcione siempre; abre en modo edición con los problemas listados. Los errores de campos, ids y referencias sí bloquean.
+- **Al guardar o importar** se fijan las posiciones que falten (como al duplicar) y el título se desambigua solo si ya existe ("X 2"). Un mapa con todas sus posiciones y título nuevo queda idéntico (lo comprueban los e2e).
+- **El enlace se copia al pulsar "Compartir"** y además se muestra en un diálogo: si el portapapeles no está disponible, el texto queda seleccionable con un mensaje.
+- **Selector de archivo propio**: el `<input type="file">` nativo dice "Choose File" en el idioma del navegador; se oculta y lo abre un botón en español.
+- **PNG con transform propio** en lugar de `getViewportForBounds`: a zoom 1 la imagen mide exactamente la caja de los nodos + margen, lo que permite comprobar en el e2e que están todos.
+
+### Problemas encontrados y resueltos
+
+1. Al cerrar el diálogo de compartir el foco iba a `<body>` (no había `DialogTrigger`). Ahora el botón es el trigger; el diálogo de importar, que se abre desde el menú, devuelve el foco a "Acciones del mapa".
+2. El textarea se marcaba inválido cuando el error venía del archivo. Ahora solo con errores del texto pegado.
+3. Navegar a la misma página con otro hash no recarga: el diálogo seguía abierto en el e2e móvil. Es el caso real de `hashchange`; el test cierra el diálogo antes.
+
+### Temas abiertos
+
+- El aviso de 8000 caracteres es orientativo; no se probaron límites de apps concretas.
+- El diálogo de renombrar (slice 1) tampoco devuelve el foco al menú al cerrarse; no se tocó aquí para no pisar la ronda de revisión del slice 1.
+- Mobbin no se consultó en este slice; los patrones (diálogo de compartir con enlace y botón copiar, banner de solo lectura) siguen los componentes shadcn ya usados.
+
+### Checks
+
+Desde cero: install, typecheck, lint, 120 tests unitarios, build y 20 e2e (`E2E_PORT=3120`) en verde; greps vacíos; árbol limpio. Ver [checks.md](checks.md); logs en `.check-logs/s2/`.

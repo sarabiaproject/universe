@@ -1,27 +1,27 @@
 # Checks
 
-Último registro: 2026-10-26, rama `slice-1-editor` tras los arreglos de la revisión ronda 1 (HEAD `50b6ba1` más docs), macOS (arm64), Node v26.7.0, pnpm 11.22.0. Ejecutado desde cero (`rm -rf node_modules .next test-results`), en este orden. Logs en `.check-logs/s1-fix-r1/` (ignorado por git).
+Último registro: 2026-10-26, rama `slice-2-share` (slice 2, compartir), macOS (arm64), Node v26.7.0, pnpm 11.22.0. Ejecutado desde cero (`rm -rf node_modules .next test-results`), en este orden. Logs en `.check-logs/s2/` (ignorado por git).
 
 | # | Comando | Resultado |
 | --- | --- | --- |
-| 0 | `pnpm install --frozen-lockfile` | ✅ exit 0, lockfile al día |
+| 0 | `pnpm install --frozen-lockfile` | ✅ exit 0, lockfile al día (nuevas: `lz-string`, `html-to-image`) |
 | 1 | `pnpm typecheck` (`next typegen && tsc --noEmit`) | ✅ exit 0, sin errores |
 | 2 | `pnpm lint` (`eslint`, incluye la regla que restringe `localStorage` a `src/lib/storage.ts`) | ✅ exit 0, sin warnings |
-| 3 | `pnpm test` (`vitest run`) | ✅ 7 archivos, 87 tests pasan (antes 69) |
+| 3 | `pnpm test` (`vitest run`) | ✅ 11 archivos, 120 tests pasan (antes 87) |
 | 4 | `pnpm build` (`next build`) | ✅ exit 0, `/` prerenderizada como estática |
-| 5 | `E2E_PORT=3110 PLAYWRIGHT_BROWSERS_PATH=.playwright-browsers pnpm test:e2e` | ✅ 12 tests pasan (4 del visor, 8 del editor) |
+| 5 | `E2E_PORT=3120 PLAYWRIGHT_BROWSERS_PATH=.playwright-browsers pnpm test:e2e` | ✅ 20 tests pasan (4 del visor, 8 del editor, 8 de compartir) |
 | 6 | Colores hardcodeados: `grep -rnE '#[0-9a-fA-F]{3,8}\b\|rgba?\(\|oklch\(\|hsl\(' src \| grep -v globals.css` | ✅ sin resultados |
 | 7 | `grep -rnE ":\s*any\b\|as any\|@ts-ignore\|@ts-expect-error\|eslint-disable" src tests` | ✅ sin resultados |
 | 8 | `git status --short` después de todos los checks | ✅ vacío |
 
-El puerto 3100 de esta máquina lo usa otro servicio, así que el e2e corrió con `E2E_PORT=3110`. `PLAYWRIGHT_BROWSERS_PATH=.playwright-browsers` apunta al Chromium instalado dentro del repo (en la caché global puede faltar la revisión que pide Playwright 1.64).
+El puerto 3100 de esta máquina lo usa otro servicio y el 3110 el revisor de otra sesión, así que el e2e corrió con `E2E_PORT=3120`. `PLAYWRIGHT_BROWSERS_PATH=.playwright-browsers` apunta al Chromium instalado dentro del repo (en la caché global puede faltar la revisión que pide Playwright 1.64).
 
 ## Salida
 
 ```text
 $ vitest run
- Test Files  7 passed (7)
-      Tests  87 passed (87)
+ Test Files  11 passed (11)
+      Tests  120 passed (120)
 
 $ next build
 ✓ Compiled successfully
@@ -30,8 +30,8 @@ Route (app)
 └ ○ /_not-found
 
 $ playwright test
-[WebServer] $ next start --port 3110
-  12 passed (11.9s)
+[WebServer] $ next start --port 3120
+  20 passed (11.3s)
 ```
 
 ## Qué cubre cada test
@@ -45,6 +45,10 @@ $ playwright test
 - `layout.test.ts`: el camino principal queda ordenado de izquierda a derecha en una sola fila (ambos mapas); las ramas quedan fuera de esa fila y ningún par de tarjetas se superpone; los casos límite que salen del camino principal van abajo; las ramas arrancan a la derecha de su ancla; se respetan las posiciones explícitas; con todas las posiciones fijas no corre dagre (O5).
 - `navigation.test.ts`: anterior/siguiente en el camino principal (incluye extremos), en ramas (anterior = padre, siguiente = siguiente nodo principal tras el ancla), casos límite anidados, rama del último nodo, conexiones entrantes y salientes, etiquetas de posición ("3/9 · camino principal").
 - `markdown.test.ts`: párrafos, listas y marcas en línea.
+- `share.test.ts` (slice 2): ida y vuelta exacta (`toEqual`) de los dos ejemplos y de un mapa con acentos, emoji, `#?&=` y posiciones decimales; la URL reemplaza el hash anterior y solo usa caracteres seguros; enlaces vacíos, cortados a la mitad o corruptos dan un error en español que menciona el enlace; un mapa que incumple el esquema da el error con su ruta (`nodes.0.summary: …`); JSON que no es un mapa.
+- `io.test.ts` (slice 2): exportar → importar devuelve el mismo mapa (ejemplos incluidos); JSON con sangría; `details` por defecto; texto vacío; JSON roto con línea y columna; errores del esquema con ruta; claves desconocidas, otra versión y no-objetos; un borrador que solo rompe el camino principal se acepta con sus problemas; `slugify` (acentos, ñ, emoji, longitud).
+- `export-image.test.ts` (slice 2): el marco del PNG contiene todos los nodos de ambos ejemplos con 48 px de margen a 2x; un nodo da tarjeta + margen exacto; mapas enormes bajan el `pixelRatio` en lugar de fallar.
+- `store-share.test.ts` (slice 2): un hash sin mapa no hace nada; abrir un enlace muestra el mapa exacto en modo Ver, ignora ediciones y no se guarda (al recargar vuelve al mapa anterior); "Guardar en mis mapas" lo guarda igual y abre en edición; "Editar" sobre un compartido lo guarda primero; un enlace corrupto avisa y deja el mapa actual; se puede volver al compartido desde el selector; importar añade un mapa nuevo con título único y posiciones fijas, conserva exacto un mapa con posiciones y abre en edición los borradores con problemas.
 
 **Smoke del visor (Playwright, `tests/e2e/smoke.spec.ts`)**
 
@@ -62,6 +66,17 @@ $ playwright test
 - Ronda 1, almacenamiento bloqueado (B1): con el getter de `localStorage` lanzando `SecurityError`, el visor carga los 26 nodos sin error boundary, aparece el aviso, se puede crear y editar un mapa y no hay `pageerror`.
 - Ronda 1, dos pestañas (O10): A crea un mapa, B (abierta antes) crea otro; al recargar A están los dos.
 - Móvil 360×740: Editar sobre el ejemplo, sin overflow horizontal, botones de edición ≥ 40 px, edición desde el Sheet (título, selects, "Centrar en el canvas" y "Cerrar" ≥ 40 px, O6) y añadir/deshacer un nodo.
+**Compartir (Playwright, `tests/e2e/share.spec.ts`, slice 2)**
+
+- Compartir → contexto limpio → guardar: se crea un mapa de 3 nodos (con «ñ», emoji y `#?&=`), "Compartir" copia el enlace (se lee del portapapeles), Escape devuelve el foco al botón; en un `browser.newContext()` nuevo el enlace muestra el banner, modo Ver y 3 nodos; el JSON que exporta es idéntico (`toEqual`) al mapa guardado en el origen; no escribe nada en localStorage; "Guardar en mis mapas" lo guarda idéntico, pasa a Editar, limpia el hash y sobrevive a la recarga. Sin `pageerror`.
+- Enlace corrupto, cortado o con un mapa inválido: aviso "No se pudo abrir el enlace" (con `nodes.0.summary: …` en el inválido), se ven los 26 nodos del ejemplo, el hash se limpia, el aviso se cierra y la app responde. Sin `pageerror`.
+- Enlace pegado en una pestaña abierta (`hashchange`): abre el mapa compartido; al cambiar de mapa se limpia el hash.
+- Importar: un archivo válido (por el selector de archivos del botón en español) crea "Importado" idéntico en localStorage; un archivo inválido lista los errores con ruta y deja el diálogo abierto; JSON pegado roto dice línea y columna; Escape devuelve el foco al menú; texto pegado válido también importa. Sin `pageerror`.
+- Exportar: JSON de "universe: el spec" como `universe-el-spec.json` con 26 nodos; PNG `universe-el-spec.png` cuyas dimensiones son exactamente (caja de los 26 nodos del canvas + 96) × 2 (±2 px), con píxel de esquina claro en tema claro y oscuro en tema oscuro.
+- Enlace de más de 8000 caracteres (80 nodos con texto aleatorio): aparece el aviso.
+- Solo teclado: Enter en "Compartir", Escape vuelve al botón; menú → "Importar JSON…" → foco en "Elegir archivo JSON…", Tab al textarea, Importar con Enter muestra el error en `role="alert"`; "Exportar JSON" con Enter descarga.
+- Móvil 360×740: un enlace abierto sin overflow horizontal, "Guardar en mis mapas" ≥ 40 px y guarda. El smoke suma "Compartir" al orden de tabulación y a las áreas táctiles de ≥ 40 px.
+
 - Capturas: por defecto en `test-results/screenshots/` (ignorado). Con `UPDATE_SCREENSHOTS=1` se escriben en `docs/screenshots/`: `desktop-light.png`, `desktop-dark.png`, `desktop-keyboard-focus.png`, `mobile.png`, `mobile-sheet.png`, `editor-empty.png`, `editor-desktop.png`, `editor-dark.png`, `editor-ten-nodes.png`, `editor-mobile-sheet.png`. Se regeneraron así una vez en el slice 1 (cambió la vista inicial por O8 y el encabezado).
 
 ## Notas
@@ -69,3 +84,4 @@ $ playwright test
 - `pnpm test:e2e` necesita Chromium para Playwright: `pnpm exec playwright install chromium`. En esta máquina se instaló dentro del repo (`PLAYWRIGHT_BROWSERS_PATH=.playwright-browsers`, ignorado por git) para no escribir fuera de la carpeta del proyecto.
 - `pnpm test:e2e` sirve el build de producción con `next start`, así que hay que correr `pnpm build` antes.
 - `E2E_PORT` cambia el puerto del e2e (por defecto 3100).
+- El e2e de compartir guarda `share-dialog.png`, `share-open-link.png` e `import-errors.png` con la misma regla de `UPDATE_SCREENSHOTS`, y los PNG exportados (`export-light.png`, `export-dark.png`) siempre en `test-results/screenshots/`. En este PR no se regeneró `docs/screenshots/`.
