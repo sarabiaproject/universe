@@ -1,6 +1,6 @@
 # Checks
 
-Último registro: 2026-10-26, rama `slice-2-share` (slice 2, compartir), macOS (arm64), Node v26.7.0, pnpm 11.22.0. Ejecutado desde cero (`rm -rf node_modules .next test-results`), en este orden. Logs en `.check-logs/s2/` (ignorado por git).
+Último registro: 2026-10-26, rama `slice-2-share` tras mergear `origin/slice-1-editor` (ronda 2 del slice 1), macOS (arm64), Node v26.7.0, pnpm 11.22.0. Ejecutado desde cero (`rm -rf node_modules .next test-results`), en este orden. Logs en `.check-logs/s2-merge/` (ignorado por git y por ESLint).
 
 | # | Comando | Resultado |
 | --- | --- | --- |
@@ -9,7 +9,7 @@
 | 2 | `pnpm lint` (`eslint`, incluye la regla que restringe `localStorage` a `src/lib/storage.ts`) | ✅ exit 0, sin warnings |
 | 3 | `pnpm test` (`vitest run`) | ✅ 11 archivos, 120 tests pasan (antes 87) |
 | 4 | `pnpm build` (`next build`) | ✅ exit 0, `/` prerenderizada como estática |
-| 5 | `E2E_PORT=3120 PLAYWRIGHT_BROWSERS_PATH=.playwright-browsers pnpm test:e2e` | ✅ 20 tests pasan (4 del visor, 8 del editor, 8 de compartir) |
+| 5 | `E2E_PORT=3120 PLAYWRIGHT_BROWSERS_PATH=.playwright-browsers pnpm test:e2e` | ✅ 21 tests pasan (4 del visor, 9 del editor, 8 de compartir) |
 | 6 | Colores hardcodeados: `grep -rnE '#[0-9a-fA-F]{3,8}\b\|rgba?\(\|oklch\(\|hsl\(' src \| grep -v globals.css` | ✅ sin resultados |
 | 7 | `grep -rnE ":\s*any\b\|as any\|@ts-ignore\|@ts-expect-error\|eslint-disable" src tests` | ✅ sin resultados |
 | 8 | `git status --short` después de todos los checks | ✅ vacío |
@@ -31,7 +31,7 @@ Route (app)
 
 $ playwright test
 [WebServer] $ next start --port 3120
-  20 passed (11.3s)
+  21 passed (14.4s)
 ```
 
 ## Qué cubre cada test
@@ -66,6 +66,9 @@ $ playwright test
 - Ronda 1, almacenamiento bloqueado (B1): con el getter de `localStorage` lanzando `SecurityError`, el visor carga los 26 nodos sin error boundary, aparece el aviso, se puede crear y editar un mapa y no hay `pageerror`.
 - Ronda 1, dos pestañas (O10): A crea un mapa, B (abierta antes) crea otro; al recargar A están los dos.
 - Móvil 360×740: Editar sobre el ejemplo, sin overflow horizontal, botones de edición ≥ 40 px, edición desde el Sheet (título, selects, "Centrar en el canvas" y "Cerrar" ≥ 40 px, O6) y añadir/deshacer un nodo.
+- Ronda 2, móvil (D1-r2): borrar un nodo desde el Sheet deja el foco dentro del Sheet y fuera de contenido `aria-hidden`; Suprimir no abre el borrado de un nodo oculto y Tab no sale del Sheet. Fallaba antes del arreglo.
+- Ronda 2: renombrar (guardar o cancelar) y borrar un mapa devuelven el foco al botón "Acciones del mapa".
+
 **Compartir (Playwright, `tests/e2e/share.spec.ts`, slice 2)**
 
 - Compartir → contexto limpio → guardar: se crea un mapa de 3 nodos (con «ñ», emoji y `#?&=`), "Compartir" copia el enlace (se lee del portapapeles), Escape devuelve el foco al botón; en un `browser.newContext()` nuevo el enlace muestra el banner, modo Ver y 3 nodos; el JSON que exporta es idéntico (`toEqual`) al mapa guardado en el origen; no escribe nada en localStorage; "Guardar en mis mapas" lo guarda idéntico, pasa a Editar, limpia el hash y sobrevive a la recarga. Sin `pageerror`.
