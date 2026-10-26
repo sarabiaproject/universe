@@ -230,11 +230,18 @@ test.describe("editor (desktop)", () => {
     await page.getByLabel("Nombre").fill("Mi spec");
     await page.getByRole("button", { name: "Guardar" }).click();
     await expect(page.getByTestId("map-header")).toContainText("Mi spec");
+    // Focus goes back to the menu that opened the dialog, not to <body>.
+    await expect(page.getByRole("button", { name: "Acciones del mapa" })).toBeFocused();
+    await page.keyboard.press("Enter");
+    await page.getByRole("menuitem", { name: "Renombrar…" }).click();
+    await page.keyboard.press("Escape");
+    await expect(page.getByRole("button", { name: "Acciones del mapa" })).toBeFocused();
     await page.getByRole("button", { name: "Acciones del mapa" }).click();
     await page.getByRole("menuitem", { name: "Borrar mapa…" }).click();
     await expect(page.getByRole("alertdialog")).toContainText("¿Borrar «Mi spec»?");
     await page.getByRole("button", { name: "Borrar mapa" }).click();
     await expect(page.getByTestId("map-header")).toContainText("universe: el spec · 26 nodos");
+    await expect(page.getByRole("button", { name: "Acciones del mapa" })).toBeFocused();
     expect((await stored(page)).state.userMaps).toHaveLength(0);
   });
 
