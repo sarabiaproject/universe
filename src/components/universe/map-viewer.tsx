@@ -1,0 +1,160 @@
+"use client";
+
+import { ReactFlowProvider } from "@xyflow/react";
+import { PanelBottomOpen } from "lucide-react";
+import { useState } from "react";
+
+import {
+  ResizableHandle,
+  ResizablePanel,
+  ResizablePanelGroup,
+} from "@/components/ui/resizable";
+import { Button } from "@/components/ui/button";
+import { ScrollArea } from "@/components/ui/scroll-area";
+import {
+  Sheet,
+  SheetContent,
+  SheetDescription,
+  SheetHeader,
+  SheetTitle,
+} from "@/components/ui/sheet";
+import { useIsMobile } from "@/hooks/use-is-mobile";
+import { getNodeContext, positionLabel, type NodeContext } from "@/lib/graph";
+import type { SystemMap } from "@/lib/schema";
+import { BUNDLED_MAPS } from "@/maps";
+import { useMapStore } from "@/store/map-store";
+
+import { MapCanvas } from "./map-canvas";
+import { MapHeader } from "./map-header";
+import { MapPicker } from "./map-picker";
+import { NavButtons, NodeDetail } from "./node-detail";
+import { ThemeToggle } from "./theme-toggle";
+
+const DETAIL_ID = "detalle";
+
+/** Skips the canvas nodes in the tab order and lands on the node detail. */
+function SkipToDetail() {
+  return (
+    <a
+      href={`#${DETAIL_ID}`}
+      onClick={(event) => {
+        const target = document.getElementById(DETAIL_ID);
+        if (!target) return;
+        event.preventDefault();
+        target.focus();
+      }}
+      className="pointer-events-auto sr-only rounded-md border bg-background px-3 py-2 text-sm focus:not-sr-only"
+    >
+      Saltar al detalle
+    </a>
+  );
+}
+
+function CanvasArea({ map }: { map: SystemMap }) {
+  return (
+    <div className="relative h-full w-full overflow-hidden">
+      {/* Header controls come first in the DOM so Tab reaches them before the nodes. */}
+      <div className="pointer-events-none absolute inset-x-3 top-3 z-10 flex flex-col-reverse items-start gap-2 sm:flex-row sm:justify-between">
+        <div className="flex flex-col items-start gap-2">
+          <SkipToDetail />
+          <MapHeader map={map} />
+        </div>
+        <div className="pointer-events-auto flex items-center gap-1.5 self-end sm:self-auto">
+          <MapPicker />
+          <ThemeToggle />
+        </div>
+      </div>
+      {map.nodes.length === 0 ? (
+        <div className="flex h-full items-center justify-center p-6 text-center text-sm text-muted-foreground">
+          Este mapa no tiene nodos todavía.
+        </div>
+      ) : (
+        <MapCanvas map={map} />
+      )}
+    </div>
+  );
+}
+
+function EmptyDetail() {
+  return (
+    <div className="p-5 text-sm text-muted-foreground">
+      Selecciona un nodo para ver su explicación.
+    </div>
+  );
+}
+
+function MobileBar({ map, ctx }: { map: SystemMap; ctx: NodeContext }) {
+  const [open, setOpen] = useState(false);
+  return (
+    <div
+      id={DETAIL_ID}
+      tabIndex={-1}
+      data-testid="mobile-bar"
+      className="flex flex-col gap-2 border-t bg-background p-3 outline-none"
+    >
+      <div className="flex min-w-0 items-start justify-between gap-2">
+        <div className="min-w-0">
+          <p className="truncate font-mono text-[11px] text-muted-foreground">{positionLabel(ctx)}</p>
+          <p data-testid="detail-title" className="truncate text-sm font-semibold">
+            {ctx.node.title}
+          </p>
+          <p className="line-clamp-2 text-xs text-muted-foreground">{ctx.node.summary}</p>
+        </div>
+        <Button variant="outline" className="h-10 shrink-0" onClick={() => setOpen(true)}>
+          <PanelBottomOpen /> Detalle
+        </Button>
+      </div>
+      <NavButtons ctx={ctx} compact />
+      <Sheet open={open} onOpenChange={setOpen}>
+        <SheetContent side="bottom" className="max-h-[85svh] gap-0 p-0">
+          <SheetHeader className="sr-only">
+            <SheetTitle>{ctx.node.title}</SheetTitle>
+            <SheetDescription>{ctx.node.summary}</SheetDescription>
+          </SheetHeader>
+          <ScrollArea className="max-h-[85svh] overflow-y-auto">
+            <NodeDetail map={map} ctx={ctx} inSheet />
+          </ScrollArea>
+        </SheetContent>
+      </Sheet>
+    </div>
+  );
+}
+
+export function MapViewer() {
+  const mapId = useMapStore((s) => s.mapId);
+  const selectedId = useMapStore((s) => s.selectedId);
+  const isMobile = useIsMobile();
+  const map = (BUNDLED_MAPS.find((m) => m.id === mapId) ?? BUNDLED_MAPS[0]).map;
+  const ctx = selectedId ? getNodeContext(map, selectedId) : null;
+
+  return (
+    <ReactFlowProvider>
+      <main className="flex h-dvh w-full flex-col overflow-hidden">
+        {/* Announces only the selected node, not the whole detail. */}
+        <p className="sr-only" aria-live="polite" data-testid="selection-announcer">
+          {ctx ? `${ctx.node.title}, ${positionLabel(ctx)}` : ""}
+        </p>
+        {isMobile ? (
+          <>
+            <div className="min-h-0 flex-1">
+              <CanvasArea map={map} />
+            </div>
+            {ctx && <MobileBar map={map} ctx={ctx} />}
+          </>
+        ) : (
+          <ResizablePanelGroup orientation="horizontal">
+            <ResizablePanel defaultSize="68" minSize="40">
+              <CanvasArea map={map} />
+            </ResizablePanel>
+            <ResizableHandle />
+            <ResizablePanel defaultSize="32" minSize="22" maxSize="50">
+              <ScrollArea id={DETAIL_ID} tabIndex={-1} data-testid="detail-panel" className="h-full outline-none">
+                {ctx ? <NodeDetail map={map} ctx={ctx} /> : <EmptyDetail />}
+              </ScrollArea>
+            </ResizablePanel>
+          </ResizablePanelGroup>
+        )}
+      </main>
+    </ReactFlowProvider>
+  );
+}

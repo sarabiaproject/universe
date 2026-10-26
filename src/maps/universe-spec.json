@@ -1,0 +1,232 @@
+{
+  "version": 1,
+  "title": "universe: el spec",
+  "summary": "La especificación de universe contada como mapa: del problema al deploy, con sus ramas y casos límite.",
+  "nodes": [
+    {
+      "id": "problema",
+      "title": "Problema",
+      "summary": "Los sistemas se explican en docs largos o diagramas estáticos; nadie ve el recorrido completo ni sus ramas.",
+      "details": "- Un flujo de software, un proyecto o la vida personal son **sistemas** con un camino principal y desvíos.\n- Los docs lineales esconden las ramas; los diagramas no explican cada paso.\n- Falta una vista que sea a la vez **mapa** y **explicación**.",
+      "preview": { "type": "text", "content": "¿Cómo se ve todo el sistema de un vistazo?" },
+      "track": "main"
+    },
+    {
+      "id": "mapa-universal",
+      "title": "Mapa universal",
+      "summary": "Cualquier sistema como un mapa explorable de nodos conectados, cada uno con su explicación.",
+      "details": "- Izquierda: canvas infinito con mini tarjetas conectadas por flechas.\n- Derecha: panel de detalle con título, explicación y enlaces.\n- Camino principal de izquierda a derecha; ramas arriba y abajo para errores y casos límite.",
+      "preview": { "type": "ui", "content": "[canvas] | [detalle]" },
+      "track": "main"
+    },
+    {
+      "id": "flujo-usuario",
+      "title": "Flujo de usuario",
+      "summary": "Abrir un mapa, seguir el camino principal y entrar a cada nodo para leer su explicación.",
+      "details": "- Arranca con el primer nodo seleccionado y el camino principal ajustado.\n- Clic en un nodo → el panel muestra posición, explicación y detalles.\n- **← anterior / siguiente →** recorre el camino; los chips saltan a nodos conectados.",
+      "preview": { "type": "list", "content": "Abrir mapa\nSeguir el camino\nAbrir cada nodo" },
+      "track": "main"
+    },
+    {
+      "id": "stack",
+      "title": "Stack",
+      "summary": "Next.js + TypeScript estricto, shadcn/ui con Tailwind 4, React Flow, dagre, zustand y Zod.",
+      "details": "- Next.js (App Router), pnpm, desplegable en Vercel.\n- 100% en el cliente: sin backend, sin base de datos, sin login, sin API keys.\n- `next-themes` para claro/oscuro.",
+      "preview": { "type": "code", "content": "next · shadcn · @xyflow/react · dagre" },
+      "track": "main"
+    },
+    {
+      "id": "arquitectura",
+      "title": "Arquitectura",
+      "summary": "Un JSON validado con Zod se convierte en nodos y aristas; dagre calcula el layout y zustand guarda la selección.",
+      "details": "- `SystemMap` → validación Zod → layout dagre (LR).\n- El camino principal queda fijo en una fila; cada rama busca el carril libre más cercano.\n- Estado mínimo en zustand: mapa activo y nodo seleccionado.",
+      "preview": { "type": "code", "content": "JSON → zod → dagre → React Flow" },
+      "track": "main"
+    },
+    {
+      "id": "slice-0",
+      "title": "Slice 0",
+      "summary": "El visor: carga un mapa JSON escrito a mano, lo ordena y permite recorrerlo nodo a nodo.",
+      "details": "- Tarjetas mínimas con título, resumen y vista previa.\n- Panel de detalle con anterior/siguiente y chips de conexiones.\n- Zoom con %, botón **Ajustar** y modo claro/oscuro.\n- Dos mapas de ejemplo.",
+      "preview": { "type": "metric", "content": "0 visor" },
+      "track": "main"
+    },
+    {
+      "id": "slice-1",
+      "title": "Slice 1",
+      "summary": "Edición a mano: crear, mover y conectar nodos, con guardado local en el navegador.",
+      "details": "- Editar título, resumen y detalles desde el panel.\n- Arrastrar y conectar nodos en el canvas.\n- Persistencia en localStorage.",
+      "preview": { "type": "metric", "content": "1 edición" },
+      "track": "main"
+    },
+    {
+      "id": "slice-2",
+      "title": "Slice 2",
+      "summary": "Compartir: enlaces con el mapa codificado, importar y exportar JSON y paleta de comandos.",
+      "details": "- Enlaces para compartir sin backend.\n- Importar/exportar JSON.\n- Paleta de comandos para moverse rápido.",
+      "preview": { "type": "metric", "content": "2 compartir" },
+      "track": "main"
+    },
+    {
+      "id": "deploy",
+      "title": "Deploy",
+      "summary": "Vercel con la configuración por defecto de Next.js, sin variables de entorno.",
+      "details": "- Cada PR genera un preview automático.\n- Producción solo tras revisar el preview.\n- Código abierto con licencia MIT.",
+      "preview": { "type": "text", "content": "vercel · preview por PR" },
+      "track": "main"
+    },
+    {
+      "id": "competencia",
+      "title": "Competencia",
+      "summary": "Pizarras, diagramadores y docs: dibujan o explican, pero rara vez las dos cosas a la vez.",
+      "details": "- Pizarras infinitas: libres pero sin estructura.\n- Diagramadores: estructura sin explicación por paso.\n- Docs: explicación sin mapa.",
+      "track": "branch"
+    },
+    {
+      "id": "diferencial",
+      "title": "Diferencial",
+      "summary": "Mapa y explicación en una sola vista, manipulado a mano, sin IA y sin cuentas.",
+      "details": "- Nada de IA ni LLM: es una herramienta nativa.\n- Cero fricción: abrir y explorar.\n- Esquema JSON abierto que cualquiera puede escribir.",
+      "track": "branch"
+    },
+    {
+      "id": "esquema",
+      "title": "Esquema del mapa",
+      "summary": "SystemMap: versión, título, resumen, nodos y aristas tipadas, validado con Zod.",
+      "details": "- `Node`: id, título, resumen (≤140), detalles en markdown, vista previa, carril.\n- `Edge`: from, to, tipo (`main`, `branch`, `edge_case`) y etiqueta opcional.\n- Documentado en el README.",
+      "preview": { "type": "code", "content": "{ nodes: Node[], edges: Edge[] }" },
+      "track": "branch"
+    },
+    {
+      "id": "decisiones",
+      "title": "Decisiones tomadas",
+      "summary": "Proyecto personal, licencia MIT, sin LLM, siempre shadcn/ui y referencias de Mobbin.",
+      "details": "- Proyecto personal y de código abierto.\n- Licencia MIT.\n- Sin IA en ninguna parte del producto.\n- Componentes siempre de shadcn/ui.",
+      "track": "branch"
+    },
+    {
+      "id": "direccion-ui",
+      "title": "Dirección de UI",
+      "summary": "Súper minimalista y monocromo, con un solo color de acento para la selección.",
+      "details": "- Grilla de puntos sutil y líneas de 1px.\n- Tarjetas pequeñas y mucho espacio en blanco.\n- Tipografía Geist.",
+      "preview": { "type": "ui", "content": "● acento · ○ resto" },
+      "track": "branch"
+    },
+    {
+      "id": "referencias-mobbin",
+      "title": "Referencias Mobbin",
+      "summary": "OpenAI Agent Builder, Railway, Clay, WRITER y AirOps como guía visual.",
+      "details": "- **OpenAI Agent Builder**: minimalismo del canvas.\n- **Railway**: canvas oscuro.\n- **Clay**: flujo con panel derecho.\n- **WRITER**: blueprint con ramas.\n- **AirOps**: inspector a la derecha.",
+      "preview": { "type": "list", "content": "Agent Builder\nRailway\nClay" },
+      "track": "branch"
+    },
+    {
+      "id": "componentes-shadcn",
+      "title": "Componentes shadcn",
+      "summary": "Resizable, Sheet, ToggleGroup, Tooltip, Button, ScrollArea, Badge y Select.",
+      "details": "- **Resizable** separa canvas y panel en escritorio.\n- **Sheet** muestra el detalle en móvil.\n- Todos los colores salen de los tokens del tema.",
+      "track": "branch"
+    },
+    {
+      "id": "react-flow-ui",
+      "title": "React Flow UI",
+      "summary": "Componentes oficiales de xyflow sobre shadcn: base-node y zoom-slider.",
+      "details": "- Se instalan con `npx shadcn@latest add https://ui.reactflow.dev/<componente>`.\n- Base para las tarjetas y el control de zoom.",
+      "preview": { "type": "code", "content": "shadcn add ui.reactflow.dev/base-node" },
+      "track": "branch"
+    },
+    {
+      "id": "rf-vs-tldraw",
+      "title": "React Flow vs tldraw",
+      "summary": "React Flow gana: grafos tipados, layout automático y licencia MIT; tldraw es dibujo libre.",
+      "details": "- React Flow modela nodos y aristas, justo lo que es un mapa.\n- Licencia MIT, sin marcas de agua.\n- tldraw brilla en dibujo libre, que aquí no hace falta.",
+      "track": "branch"
+    },
+    {
+      "id": "criterios",
+      "title": "Criterios de aceptación",
+      "summary": "Build, lint y typecheck en verde, tests unitarios y un smoke test de Playwright.",
+      "details": "- `pnpm build`, `pnpm lint`, `pnpm typecheck`.\n- Vitest para esquema, layout y navegación.\n- Playwright: carga, clic, anterior/siguiente, modo oscuro y 360px.",
+      "track": "branch"
+    },
+    {
+      "id": "metricas",
+      "title": "Métricas",
+      "summary": "Mapas creados y nodos abiertos por sesión, medidos sin rastreo invasivo.",
+      "details": "- Cuántos nodos abre una persona antes de irse.\n- Cuántos mapas se crean a mano.\n- Nada de analítica de terceros por defecto.",
+      "preview": { "type": "metric", "content": "26 nodos" },
+      "track": "branch"
+    },
+    {
+      "id": "riesgos",
+      "title": "Riesgos",
+      "summary": "Mapas grandes que se vuelven ilegibles y enlaces compartidos que crecen sin control.",
+      "details": "- Rendimiento con cientos de nodos.\n- Layout confuso con muchas ramas.\n- Límite de longitud de URL al compartir.",
+      "track": "branch"
+    },
+    {
+      "id": "preguntas",
+      "title": "Preguntas abiertas",
+      "summary": "¿Dominio propio? ¿Galería pública de mapas? ¿Formato para importar desde otras herramientas?",
+      "details": "- Nombre de dominio.\n- Si habrá una galería de mapas de ejemplo.\n- Importadores desde otros formatos.",
+      "track": "branch"
+    },
+    {
+      "id": "movil-360",
+      "title": "Móvil 360px",
+      "summary": "En pantallas angostas el detalle baja a una hoja inferior y nada se desborda en horizontal.",
+      "details": "- Canvas arriba, barra con el nodo actual abajo.\n- El detalle completo se abre en un **Sheet**.\n- Verificado con Playwright a 360px.",
+      "preview": { "type": "ui", "content": "[canvas] / [detalle]" },
+      "track": "branch"
+    },
+    {
+      "id": "mapa-vacio",
+      "title": "Mapa vacío",
+      "summary": "Un mapa sin nodos muestra un estado vacío claro en lugar de un canvas en blanco.",
+      "details": "- Mensaje que explica qué falta.\n- Sin errores en consola.",
+      "track": "branch"
+    },
+    {
+      "id": "json-invalido",
+      "title": "JSON inválido",
+      "summary": "Si el JSON no cumple el esquema, se listan los errores de Zod en vez de romper la app.",
+      "details": "- Cada error indica la ruta y el motivo.\n- Aristas hacia nodos inexistentes también se reportan.",
+      "preview": { "type": "code", "content": "edges.3.to: nodo inexistente" },
+      "track": "branch"
+    },
+    {
+      "id": "url-larga",
+      "title": "URL demasiado larga",
+      "summary": "Un mapa grande codificado en el enlace puede superar el límite de los navegadores.",
+      "details": "- Comprimir el JSON antes de codificarlo.\n- Avisar y ofrecer exportar el archivo si no cabe.",
+      "track": "branch"
+    }
+  ],
+  "edges": [
+    { "from": "problema", "to": "mapa-universal", "type": "main" },
+    { "from": "mapa-universal", "to": "flujo-usuario", "type": "main" },
+    { "from": "flujo-usuario", "to": "stack", "type": "main" },
+    { "from": "stack", "to": "arquitectura", "type": "main" },
+    { "from": "arquitectura", "to": "slice-0", "type": "main" },
+    { "from": "slice-0", "to": "slice-1", "type": "main" },
+    { "from": "slice-1", "to": "slice-2", "type": "main" },
+    { "from": "slice-2", "to": "deploy", "type": "main" },
+    { "from": "problema", "to": "competencia", "type": "branch" },
+    { "from": "competencia", "to": "diferencial", "type": "branch" },
+    { "from": "mapa-universal", "to": "esquema", "type": "branch" },
+    { "from": "mapa-universal", "to": "decisiones", "type": "branch" },
+    { "from": "flujo-usuario", "to": "direccion-ui", "type": "branch" },
+    { "from": "direccion-ui", "to": "referencias-mobbin", "type": "branch" },
+    { "from": "stack", "to": "componentes-shadcn", "type": "branch" },
+    { "from": "stack", "to": "react-flow-ui", "type": "branch" },
+    { "from": "arquitectura", "to": "rf-vs-tldraw", "type": "branch" },
+    { "from": "slice-1", "to": "criterios", "type": "branch" },
+    { "from": "criterios", "to": "metricas", "type": "branch" },
+    { "from": "slice-2", "to": "riesgos", "type": "branch" },
+    { "from": "deploy", "to": "preguntas", "type": "branch" },
+    { "from": "slice-0", "to": "movil-360", "type": "edge_case" },
+    { "from": "slice-1", "to": "mapa-vacio", "type": "edge_case" },
+    { "from": "esquema", "to": "json-invalido", "type": "edge_case" },
+    { "from": "slice-2", "to": "url-larga", "type": "edge_case" }
+  ]
+}

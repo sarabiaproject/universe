@@ -1,0 +1,86 @@
+{
+  "version": 1,
+  "title": "Share modal",
+  "summary": "Los estados de un modal para compartir: desde solo tú hasta compartido con personas, con sus desvíos.",
+  "nodes": [
+    {
+      "id": "default",
+      "title": "Por defecto: solo tú",
+      "summary": "El modal abre vacío: solo tú tienes acceso y el campo de email espera.",
+      "details": "- Campo de email con foco.\n- Lista de acceso con una sola persona: tú.\n- Botón **Copiar enlace** siempre visible.",
+      "preview": { "type": "ui", "content": "[ email… ] [Invitar]\n● Tú · propietario" },
+      "track": "main"
+    },
+    {
+      "id": "email-entered",
+      "title": "Email escrito",
+      "summary": "La persona escribe un email válido y el botón Invitar se activa.",
+      "details": "- Validación en vivo del formato.\n- Sugerencias de contactos recientes.\n- **Enter** también invita.",
+      "preview": { "type": "ui", "content": "[ ana@correo.com ] [Invitar]" },
+      "track": "main"
+    },
+    {
+      "id": "first-added",
+      "title": "Primera persona añadida",
+      "summary": "La primera invitada aparece en la lista con su rol y un aviso breve de confirmación.",
+      "details": "- Rol por defecto: puede ver.\n- Aviso: *Ana fue invitada*.\n- El campo se limpia para la siguiente persona.",
+      "preview": { "type": "list", "content": "Tú · propietario\nAna · puede ver" },
+      "track": "main"
+    },
+    {
+      "id": "shared",
+      "title": "Compartido con personas",
+      "summary": "Varias personas con acceso; cada una con su rol editable.",
+      "details": "- Cambiar rol o quitar acceso desde la lista.\n- Contador de personas en el encabezado.",
+      "preview": { "type": "metric", "content": "3 personas" },
+      "track": "main"
+    },
+    {
+      "id": "email-correction",
+      "title": "Email por corregir",
+      "summary": "El email tiene un error de formato; se marca el campo y se explica cómo corregirlo.",
+      "details": "- Mensaje junto al campo, no un modal.\n- Invitar queda deshabilitado hasta corregir.",
+      "preview": { "type": "ui", "content": "[ ana@correo ] ⚠ falta el dominio" },
+      "track": "branch"
+    },
+    {
+      "id": "restricted",
+      "title": "Acceso restringido",
+      "summary": "Solo las personas invitadas pueden abrir el enlace.",
+      "details": "- Opción por defecto.\n- Quien no está invitado ve una pantalla para pedir acceso.",
+      "track": "branch"
+    },
+    {
+      "id": "public",
+      "title": "Acceso público",
+      "summary": "Cualquiera con el enlace puede verlo; se avisa antes de activarlo.",
+      "details": "- Confirmación explícita al cambiar.\n- Indicador visible de que el enlace es público.",
+      "track": "branch"
+    },
+    {
+      "id": "link-copied",
+      "title": "Enlace copiado",
+      "summary": "El enlace se copió al portapapeles; el botón confirma durante unos segundos.",
+      "details": "- Texto del botón: *Copiado*.\n- Vuelve a su estado tras 2 segundos.",
+      "preview": { "type": "text", "content": "✓ Copiado" },
+      "track": "branch"
+    },
+    {
+      "id": "clipboard-unavailable",
+      "title": "Portapapeles no disponible",
+      "summary": "El navegador bloquea el portapapeles; se muestra el enlace seleccionado para copiarlo a mano.",
+      "details": "- Ocurre en contextos no seguros o sin permiso.\n- Campo de solo lectura con el enlace seleccionado.",
+      "track": "branch"
+    }
+  ],
+  "edges": [
+    { "from": "default", "to": "email-entered", "type": "main", "label": "escribe email" },
+    { "from": "email-entered", "to": "first-added", "type": "main", "label": "invitar" },
+    { "from": "first-added", "to": "shared", "type": "main", "label": "más personas" },
+    { "from": "email-entered", "to": "email-correction", "type": "branch", "label": "formato inválido" },
+    { "from": "shared", "to": "restricted", "type": "branch" },
+    { "from": "restricted", "to": "public", "type": "branch", "label": "cambiar acceso" },
+    { "from": "default", "to": "link-copied", "type": "edge_case", "label": "copiar enlace" },
+    { "from": "link-copied", "to": "clipboard-unavailable", "type": "edge_case", "label": "sin permiso" }
+  ]
+}
