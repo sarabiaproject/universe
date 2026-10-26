@@ -420,4 +420,34 @@ test.describe("editor (mobile)", () => {
     await page.getByRole("button", { name: "Deshacer" }).click();
     await expect(page.locator(".react-flow__node")).toHaveCount(26);
   });
+
+  test("deleting a node from the Sheet keeps focus inside the Sheet (D1-r2)", async ({ page }) => {
+    await page.goto("/");
+    await node(page, "problema").waitFor();
+    await page.getByRole("radio", { name: "Editar" }).click();
+    await expect(page.getByTestId("map-header")).toContainText("(copia)");
+    await page.getByRole("button", { name: "Editar", exact: true }).click();
+    const sheet = page.getByRole("dialog");
+    await sheet.getByRole("button", { name: "Borrar nodo" }).click();
+    await page.getByRole("alertdialog").getByRole("button", { name: "Borrar nodo" }).click();
+    await expect(page.getByRole("alertdialog")).toHaveCount(0);
+    await expect(page.locator(".react-flow__node")).toHaveCount(25);
+    await expect(sheet).toBeVisible();
+    await page.waitForTimeout(100); // let the refocus frame run
+
+    const focus = () =>
+      page.evaluate(() => {
+        const el = document.activeElement;
+        return {
+          inSheet: Boolean(el?.closest('[role="dialog"]')),
+          hidden: Boolean(el?.closest('[aria-hidden="true"]')),
+        };
+      });
+    expect(await focus()).toEqual({ inSheet: true, hidden: false });
+    // Delete must not reach a hidden canvas node behind the Sheet; Tab stays in the Sheet.
+    await page.keyboard.press("Delete");
+    await expect(page.getByRole("alertdialog")).toHaveCount(0);
+    await page.keyboard.press("Tab");
+    expect((await focus()).inSheet).toBe(true);
+  });
 });
