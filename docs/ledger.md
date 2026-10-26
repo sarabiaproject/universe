@@ -263,3 +263,32 @@ Rama creada desde `origin/slice-2-share` (PR #3 sigue en revisión). `slice-2-sh
 ### Reporte final
 
 - **PR**: https://github.com/sarabiaproject/universe/pull/4 ("Slice 3: lanzamiento", `slice-3-launch` → `slice-2-share`; se retargetea a `main` más adelante). Sin merge, sin push a `main`, `slice-1-editor` ni `slice-2-share`, sin deploy ni comandos `vercel`, sin dominios; no se tocaron los servicios de los puertos 3100 a 3130.
+
+## 2026-10-26: Slice 3, revisión ronda 1 (rama `slice-3-launch`)
+
+Revisión independiente en `~/dev/universe-review-s3/REVIEW-s3-round-1.md`: cambios requeridos, con 1 bloqueante (B1) y 1 "debería" (D1, el test de B1).
+
+### Qué se arregló
+
+- **B1. Enter sobre "Ver todos los ejemplos…" cambiaba de mapa y no abría la galería.**
+  - Causa: Radix `SelectItem` solo hace `preventDefault` con Espacio. Con Enter, `onValueChange` abría el diálogo de forma síncrona, el diálogo enfocaba la primera tarjeta y el clic por defecto de Enter caía sobre ella. Eso abría "universe: el spec" y cerraba la galería.
+  - Arreglo: de las dos opciones de la revisión se eligió la 2. `ExampleGallery` usa `onOpenAutoFocus` con `preventDefault` y enfoca el propio diálogo, no una tarjeta. Así ningún disparador por teclado (selector, menú, estado vacío ni los que vengan) puede activar una tarjeta sin querer. Tab sigue recorriendo las tarjetas en orden, y Escape devuelve el foco a quien abrió la galería.
+  - No se sumó además la opción 1 (diferir `setGallery` con `requestAnimationFrame`): con la 2 alcanza, y diferir taparía el caso en el test.
+- **D1. e2e del camino por teclado desde el selector.**
+  - El test arranca en "Mi semana": foco en el selector → Enter → End → Enter, con pausas de ritmo humano. Sin las pausas, Playwright no reproduce el fallo. Después espera 400 ms y comprueba que el encabezado no cambió, que la galería está visible y que el foco está en el diálogo. Con Escape, el foco vuelve al selector.
+  - Falló 3 de 3 sin el fix ("universe: el spec · 26 nodos") y pasa 3 de 3 con él.
+- **REVIEW.md**: un punto nuevo. Un diálogo abierto con Enter no puede autoenfocar algo activable, y cada disparador por teclado se prueba con Enter, no con `click()`.
+
+### Seguimientos (opcionales no hechos)
+
+O1 a O6 de la revisión no se tocaron: el brief de esta ronda pide solo B1 y D1.
+- O1: `localhost` en el GIF y en `share-dialog.png`.
+- O2: enlace del GIF en el PR.
+- O3: `fontWeight` sin efecto en la imagen OG.
+- O4: `canonical` heredado por la 404.
+- O5: canvas al 28% durante la edición en el GIF.
+- O6: nombre accesible de "Ver todos los ejemplos…".
+
+### Checks
+
+Desde cero: install, typecheck, lint, 141 unitarios, build sin variables de entorno y 28 e2e (`E2E_PORT=3140`) en verde a la primera; greps vacíos; árbol limpio. Ver [checks.md](checks.md); logs en `.check-logs/s3-fix-r1/`.

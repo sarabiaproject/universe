@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo } from "react";
+import { useMemo, useRef } from "react";
 
 import { Badge } from "@/components/ui/badge";
 import {
@@ -85,12 +85,21 @@ export function ExampleGallery({
 }) {
   const mapId = useMapStore((s) => s.mapId);
   const setMap = useMapStore((s) => s.setMap);
+  const content = useRef<HTMLDivElement>(null);
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent
+        ref={content}
         data-testid="example-gallery"
         className="max-h-[90svh] overflow-y-auto sm:max-w-xl"
+        // Focus the dialog, not the first card: when Enter opens it (the "Ver todos los ejemplos…"
+        // option), the key's default click would otherwise land on that card and switch maps (B1).
+        // Tab then reaches the cards in order.
+        onOpenAutoFocus={(event) => {
+          event.preventDefault();
+          content.current?.focus();
+        }}
         // Opened from a menu or a select that are gone by now: give focus back to a control that stays.
         onCloseAutoFocus={(event) => {
           event.preventDefault();

@@ -136,6 +136,45 @@ test.describe("examples gallery (desktop)", () => {
     await expect(menu).toBeFocused();
   });
 
+  test("keyboard only: map picker → Enter on Ver todos los ejemplos… opens the gallery, map unchanged (B1)", async ({
+    page,
+  }) => {
+    const errors = trackErrors(page);
+    await page.goto("/");
+    await settle(page);
+    await openGalleryFromPicker(page);
+    await page.getByTestId("example-mi-semana").click();
+    const semana = EXAMPLES.find((e) => e.id === "mi-semana")!;
+    await expectExampleOpen(page, semana);
+
+    const picker = page.getByTestId("map-picker");
+    await picker.focus();
+    await page.keyboard.press("Enter");
+    const item = page.getByRole("option", { name: "Ver todos los ejemplos…" });
+    await expect(page.getByRole("listbox")).toBeVisible();
+    // Human pace: the bug needs the select to be settled (pressed back to back, Enter is lost).
+    await page.waitForTimeout(300);
+    await page.keyboard.press("End");
+    await expect(item).toBeFocused();
+    await page.waitForTimeout(200);
+    await page.keyboard.press("Enter");
+
+    // Enter must not fall through to a card: the gallery stays open and the map doesn't change.
+    // Give a fallen-through click time to land (it switched maps and closed the dialog within ~100 ms).
+    await page.waitForTimeout(400);
+    await expect(page.getByTestId("map-header")).toContainText(`${semana.title} · ${semana.count} nodos`);
+    const gallery = page.getByTestId("example-gallery");
+    await expect(gallery).toBeVisible();
+    // Initial focus is on the dialog itself, not on a card.
+    await expect(gallery).toBeFocused();
+
+    await page.keyboard.press("Escape");
+    await expect(gallery).toBeHidden();
+    await expect(picker).toBeFocused();
+    await expect(page.getByTestId("map-header")).toContainText(`${semana.title} · ${semana.count} nodos`);
+    expect(errors).toEqual([]);
+  });
+
   test("an empty map offers the gallery", async ({ page }) => {
     const errors = trackErrors(page);
     await page.goto("/");

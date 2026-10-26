@@ -1,6 +1,21 @@
 # Checks
 
-Último registro: 2026-10-26, rama `slice-3-launch` (slice 3, lanzamiento), macOS (arm64), Node v26.7.0, pnpm 11.22.0. Ejecutado desde cero (`rm -rf node_modules .next test-results`), en este orden y sin variables de entorno de Next o Vercel. Logs en `.check-logs/s3/` (ignorado por git).
+Último registro: 2026-10-26, rama `slice-3-launch`, fixes de la revisión ronda 1 (B1, D1). macOS (arm64), Node v26.7.0, pnpm 11.22.0. Ejecutado desde cero (`rm -rf node_modules .next test-results`), en este orden. El build corrió con `env -i HOME PATH` (sin variables de entorno). Logs en `.check-logs/s3-fix-r1/` (ignorado por git).
+
+| # | Comando | Resultado |
+| --- | --- | --- |
+| 0 | `pnpm install --frozen-lockfile` | ✅ exit 0 |
+| 1 | `pnpm typecheck` | ✅ exit 0 |
+| 2 | `pnpm lint` | ✅ exit 0 |
+| 3 | `pnpm test` | ✅ 12 archivos, 141 tests |
+| 4 | `env -i HOME="$HOME" PATH="$PATH" pnpm build` | ✅ exit 0, las 6 rutas estáticas |
+| 5 | `E2E_PORT=3140 pnpm test:e2e` | ✅ 28 pasan en la primera corrida (antes 27; nuevo: "map picker → Enter … (B1)") |
+| 6 | Greps de REVIEW.md (colores, `any`/`@ts-ignore`/`eslint-disable`) y `localhost` en `src` | ✅ sin resultados |
+| 7 | `git status --short` después de los checks | ✅ solo los cambios de este commit; los tests no ensucian |
+
+**D1 falla sin el fix.** Con `example-gallery.tsx` sin cambios, el test nuevo falló 3 de 3 veces con `Expected substring: "Mi semana · 14 nodos"`, `Received: "universe · universe: el spec · 26 nodos"`. Con el fix pasa 3 de 3, junto al resto de `launch.spec.ts` (8/8).
+
+## Registro anterior (slice 3, PR #4)
 
 | # | Comando | Resultado |
 | --- | --- | --- |
