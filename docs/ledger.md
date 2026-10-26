@@ -239,3 +239,7 @@ Tras el APROBADO de la ronda 1 del slice 2, se mergeó `origin/slice-1-editor` (
 
 - `editor-chrome.tsx` (`MapMenu`): se conservan las dos cosas, el estado `"import"`, `empty` e `isReadOnly` del slice 2 y el `menuButton` / `returnFocus` de la ronda 2.
 - `docs/ledger.md` y `docs/checks.md`: se conservan las dos secciones; la ronda 2 del slice 1 va antes del slice 2 y checks.md refleja la corrida tras el merge.
+
+### Merge de `main` y cambio de base
+
+Con el PR #2 ya mergeado a `main` (`dcc8825`), se mergeó `origin/main` en `slice-2-share` (merge normal, sin conflictos y sin cambios de contenido: `main` ya tenía todo lo de `slice-1-editor`). Checks desde cero en verde: install, typecheck, lint, 120 unitarios, build, 21 e2e (`E2E_PORT=3120`), greps vacíos y árbol limpio (logs en `.check-logs/s2-main/`). La base del PR #3 pasó a `main`.

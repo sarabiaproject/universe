@@ -1,6 +1,6 @@
 # Checks
 
-Último registro: 2026-10-26, rama `slice-2-share` tras mergear `origin/slice-1-editor` (ronda 2 del slice 1), macOS (arm64), Node v26.7.0, pnpm 11.22.0. Ejecutado desde cero (`rm -rf node_modules .next test-results`), en este orden. Logs en `.check-logs/s2-merge/` (ignorado por git y por ESLint).
+Último registro: 2026-10-26, rama `slice-2-share` tras mergear `origin/main` (con el slice 1 ya mergeado, `dcc8825`), macOS (arm64), Node v26.7.0, pnpm 11.22.0. Ejecutado desde cero (`rm -rf node_modules .next test-results`), en este orden. Logs en `.check-logs/s2-main/` (ignorado por git y por ESLint).
 
 | # | Comando | Resultado |
 | --- | --- | --- |
@@ -31,7 +31,7 @@ Route (app)
 
 $ playwright test
 [WebServer] $ next start --port 3120
-  21 passed (14.4s)
+  21 passed (13.7s)
 ```
 
 ## Qué cubre cada test
