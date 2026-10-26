@@ -235,6 +235,22 @@ export function MapCanvas({
     });
   }, [focusNonce, selectedId, positions, setCenter, getZoom]);
 
+  // After a delete, focus a neighbour (or the canvas) so keyboard users keep their place.
+  const refocus = useMapStore((s) => s.refocus);
+  const lastRefocus = useRef(refocus.nonce);
+  useEffect(() => {
+    if (refocus.nonce === lastRefocus.current) return;
+    lastRefocus.current = refocus.nonce;
+    const frame = requestAnimationFrame(() => {
+      const container = containerRef.current;
+      const target = refocus.nodeId
+        ? container?.querySelector<HTMLElement>(`.react-flow__node[data-id="${CSS.escape(refocus.nodeId)}"]`)
+        : null;
+      (target ?? container)?.focus();
+    });
+    return () => cancelAnimationFrame(frame);
+  }, [refocus]);
+
   // Fit the map when asked ("Ajustar", map change).
   const lastFit = useRef(fitNonce);
   useEffect(() => {
@@ -283,7 +299,15 @@ export function MapCanvas({
   }, [sized]);
 
   return (
-    <div ref={containerRef} className="h-full w-full" onKeyDown={onKeyDown}>
+    <div
+      ref={containerRef}
+      className="h-full w-full outline-none focus-visible:outline-2 focus-visible:outline-solid focus-visible:-outline-offset-2 focus-visible:outline-foreground"
+      onKeyDown={onKeyDown}
+      // Focus target after deleting the last node (see refocus above).
+      tabIndex={-1}
+      role="group"
+      aria-label="Lienzo del mapa"
+    >
       {sized && (
         <ReactFlow
           nodes={nodes}
