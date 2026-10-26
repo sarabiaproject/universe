@@ -120,7 +120,7 @@ export function ExampleGallery({
                     setMap(id);
                     onOpenChange(false);
                   }}
-                  className="flex h-full w-full min-w-0 flex-col gap-2 rounded-lg border bg-card p-3 text-left transition-colors outline-none hover:bg-muted/60 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-foreground aria-[current=true]:border-foreground/40"
+                  className="flex h-full w-full min-w-0 flex-col gap-2 rounded-lg border bg-card p-3 text-left transition-colors outline-none hover:bg-muted/60 focus-visible:outline-2 focus-visible:outline-solid focus-visible:outline-offset-2 focus-visible:outline-foreground aria-[current=true]:border-foreground/40"
                 >
                   <MapThumbnail map={map} />
                   <span className="flex min-w-0 items-center justify-between gap-2">
