@@ -243,3 +243,104 @@ Tras el APROBADO de la ronda 1 del slice 2, se mergeó `origin/slice-1-editor` (
 ### Merge de `main` y cambio de base
 
 Con el PR #2 ya mergeado a `main` (`dcc8825`), se mergeó `origin/main` en `slice-2-share` (merge normal, sin conflictos y sin cambios de contenido: `main` ya tenía todo lo de `slice-1-editor`). Checks desde cero en verde: install, typecheck, lint, 120 unitarios, build, 21 e2e (`E2E_PORT=3120`), greps vacíos y árbol limpio (logs en `.check-logs/s2-main/`). La base del PR #3 pasó a `main`.
+
+## 2026-10-26: Slice 3, lanzamiento (rama `slice-3-launch`)
+
+Rama creada desde `origin/slice-2-share` (PR #3 sigue en revisión). `slice-2-share` no tuvo commits nuevos durante el trabajo, así que no hubo merge. `slice-1-editor` sí tiene 4 commits nuevos (ronda 2) que todavía no están en `slice-2-share`. Uno toca `MapMenu` en `editor-chrome.tsx` (foco tras renombrar y borrar), donde este slice suma "Ver ejemplos…": cuando lleguen habrá un conflicto chico en ese archivo.
+
+### Qué se hizo
+
+- **Ejemplos nuevos**:
+  - "Mi semana" (14 nodos): hábitos, foco, ejercicio, revisión y descanso. Los desvíos: semana cargada, me enfermo → volver sin culpa, una reunión pisa el foco, lluvia, acostarse tarde y pendientes.
+  - "Lanzar un proyecto open source" (17 nodos): problema → versión mínima → licencia → README → demo → anuncio → issues → ritmo. Los desvíos: ya existe algo parecido, el alcance crece, dependencias con otra licencia, el deploy falla, nadie responde, primer PR externo, pedido fuera de alcance y agotamiento.
+  - Los dos con explicaciones cortas en español y vistas previas de los 5 tipos.
+- **`BundledMap.description`**: una línea por ejemplo para la galería. No cambia el esquema `SystemMap`.
+- **Galería** (`example-gallery.tsx`): diálogo shadcn "Ejemplos" con una tarjeta por mapa (mini mapa en SVG con `currentColor`, título, descripción, "N nodos", badge "Abierto"). Se abre desde tres lugares:
+  - el selector de mapa, con "Ver todos los ejemplos…" al final del grupo de ejemplos;
+  - el menú `⋯`, con "Ver ejemplos…";
+  - el estado vacío, con "O abre un ejemplo".
+  Al cerrar, el foco vuelve al control que la abrió; si ya no existe, al selector.
+- **Lanzamiento**:
+  - Metadatos con `metadataBase` en la URL de producción: título con plantilla, descripción, Open Graph (`es_ES`) y Twitter `summary_large_image`.
+  - `opengraph-image.tsx` y `twitter-image.tsx` comparten `src/lib/og-image.tsx` (`next/og`, estático en el build).
+  - Favicon propio (el `.ico` de `create-next-app` reemplazado por 16/32/48 px generados desde `icon.svg`), `icon.svg` y `apple-icon.tsx`.
+  - 404 en español (`not-found.tsx`).
+- **README** de lanzamiento: pitch, URL de producción, GIF, "Qué hace", tabla de capturas, cómo correrlo y desplegar, tabla de ejemplos y cómo sumar uno. El esquema y las secciones de editar y compartir se mantienen.
+- **GIF**: `scripts/record-demo.mjs` (`pnpm demo:gif`) graba con Playwright el flujo galería → ejemplo → nodos y rama → Editar (copia) → cambiar un título → Compartir, y lo convierte con ffmpeg. Dibuja un cursor, porque el video de Playwright no lo muestra. Resultado: `docs/media/demo.gif`, 2,57 MiB, 21,5 s.
+- **Capturas**: se regeneraron todas con `UPDATE_SCREENSHOTS=1`, más 6 nuevas del slice.
+- **Tests**: 141 unitarios (antes 120) y 27 e2e (antes 20). Ver [checks.md](checks.md).
+
+### Decisiones
+
+- **La galería es un diálogo, no una pantalla nueva.** La app arranca en un ejemplo y tiene una sola ruta. Un diálogo alcanzable desde el selector, el menú y el estado vacío no cambia el flujo de los slices 1 y 2 ni su lógica (el store no se tocó). Abrir un ejemplo usa `setMap`, que ya fuerza el modo Ver en mapas de solo lectura.
+- **"Ver todos los ejemplos…" dentro del `Select`.** Es un ítem con un valor centinela que abre la galería en lugar de cambiar de mapa. Así se cumple "desde el selector de mapa" sin añadir un botón más al encabezado, que a 360 px ya va justo.
+- **Colores con nombre en las imágenes generadas.** Satori no lee variables CSS. `white`, `black`, `gray`, `gainsboro` y `royalblue` equivalen al tema claro, y el grep de colores no los marca. La excepción queda limitada a esos 3 archivos y anotada en REVIEW.md.
+- **URL de producción fija en el código**, no en una variable de entorno: el build por defecto de Vercel funciona sin configurar nada. Los previews también apuntan sus tarjetas a producción.
+- **El GIF se graba sobre el build de producción** con un viewport de 1120×680. Usa siguiente/anterior, que centran al 75%, en lugar de clics sobre el mapa completo, que queda al ~30% e ilegible en un GIF de 840 px.
+- **Sin dependencias nuevas.** ffmpeg es una herramienta local, solo para regenerar el GIF.
+
+### Problemas encontrados y resueltos
+
+1. **Anillo de foco invisible en las tarjetas de la galería.** `outline-none` + `focus-visible:outline-2` no dibuja nada en Tailwind 4 (`outline-style` sigue en `none`). Lo detectó el e2e de teclado; se arregló con `focus-visible:outline-solid`. Queda en REVIEW.md como clase de error.
+2. **Satori rechaza `dotted`** (`borderTopStyle` solo acepta `solid` o `dashed`) y el build falló al prerenderizar `/opengraph-image`. El caso límite usa `dashed` gris.
+3. **La primera versión de la imagen OG recortaba una tarjeta** en el borde derecho. Ahora las dos ramas cuelgan debajo del camino.
+4. **El e2e de teclado mandaba flechas antes de que abriera el menú.** Ahora espera a que "Nuevo mapa" tenga el foco.
+
+### Temas abiertos
+
+- **Flaky previo del slice 1**: `keyboard: create, move, delete and undo without a mouse` falla en 3 de 15 en esta rama y en 4 de 15 en la base `460082d`, en pasos distintos. No es de este slice. No se tocó para no pisar la sesión del slice 1; detalle en [checks.md](checks.md).
+- Mobbin no se consultó: la galería sigue los componentes shadcn ya usados (diálogo, tarjetas con borde, badge).
+- La imagen OG usa la fuente por defecto de `next/og`, no Geist: cargarla exigiría incluir el archivo de la fuente en el repo.
+- El enlace del diálogo "Compartir" en el GIF dice `localhost:3140`, porque se grabó en local.
+- Deploy a producción y anuncio quedan fuera (sin comandos `vercel`).
+
+### Reporte final
+
+- **PR**: https://github.com/sarabiaproject/universe/pull/4 ("Slice 3: lanzamiento", `slice-3-launch` → `slice-2-share`; se retargetea a `main` más adelante). Sin merge, sin push a `main`, `slice-1-editor` ni `slice-2-share`, sin deploy ni comandos `vercel`, sin dominios; no se tocaron los servicios de los puertos 3100 a 3130.
+
+## 2026-10-26: Slice 3, revisión ronda 1 (rama `slice-3-launch`)
+
+Revisión independiente en `~/dev/universe-review-s3/REVIEW-s3-round-1.md`: cambios requeridos, con 1 bloqueante (B1) y 1 "debería" (D1, el test de B1).
+
+### Qué se arregló
+
+- **B1. Enter sobre "Ver todos los ejemplos…" cambiaba de mapa y no abría la galería.**
+  - Causa: Radix `SelectItem` solo hace `preventDefault` con Espacio. Con Enter, `onValueChange` abría el diálogo de forma síncrona, el diálogo enfocaba la primera tarjeta y el clic por defecto de Enter caía sobre ella. Eso abría "universe: el spec" y cerraba la galería.
+  - Arreglo: de las dos opciones de la revisión se eligió la 2. `ExampleGallery` usa `onOpenAutoFocus` con `preventDefault` y enfoca el propio diálogo, no una tarjeta. Así ningún disparador por teclado (selector, menú, estado vacío ni los que vengan) puede activar una tarjeta sin querer. Tab sigue recorriendo las tarjetas en orden, y Escape devuelve el foco a quien abrió la galería.
+  - No se sumó además la opción 1 (diferir `setGallery` con `requestAnimationFrame`): con la 2 alcanza, y diferir taparía el caso en el test.
+- **D1. e2e del camino por teclado desde el selector.**
+  - El test arranca en "Mi semana": foco en el selector → Enter → End → Enter, con pausas de ritmo humano. Sin las pausas, Playwright no reproduce el fallo. Después espera 400 ms y comprueba que el encabezado no cambió, que la galería está visible y que el foco está en el diálogo. Con Escape, el foco vuelve al selector.
+  - Falló 3 de 3 sin el fix ("universe: el spec · 26 nodos") y pasa 3 de 3 con él.
+- **REVIEW.md**: un punto nuevo. Un diálogo abierto con Enter no puede autoenfocar algo activable, y cada disparador por teclado se prueba con Enter, no con `click()`.
+
+### Seguimientos (opcionales no hechos)
+
+O1 a O6 de la revisión no se tocaron: el brief de esta ronda pide solo B1 y D1.
+- O1: `localhost` en el GIF y en `share-dialog.png`.
+- O2: enlace del GIF en el PR.
+- O3: `fontWeight` sin efecto en la imagen OG.
+- O4: `canonical` heredado por la 404.
+- O5: canvas al 28% durante la edición en el GIF.
+- O6: nombre accesible de "Ver todos los ejemplos…".
+
+### Checks
+
+Desde cero: install, typecheck, lint, 141 unitarios, build sin variables de entorno y 28 e2e (`E2E_PORT=3140`) en verde a la primera; greps vacíos; árbol limpio. Ver [checks.md](checks.md); logs en `.check-logs/s3-fix-r1/`.
+
+## 2026-10-26: Slice 3, merge de `main` y cambio de base (rama `slice-3-launch`)
+
+El PR #3 ya se mergeó a `main` (`7101cce`). Se mergeó `origin/main` en `slice-3-launch` con un merge normal (`f343227`), sin rebase ni force push. Así entraron los 4 commits de la ronda 2 del slice 1 y los merges del slice 2.
+
+### Conflictos y cómo se resolvieron
+
+- **`src/components/universe/editor-chrome.tsx` (`MapMenu`, 1 hunk)**: se conservan los dos lados.
+  - Del slice 1 (ronda 2): `menuButton` (`ref` del botón `⋯`) y `returnFocus`, que usan los diálogos de renombrar y borrar para devolver el foco al menú.
+  - Del slice 3: `"gallery"` en la unión del estado `dialog`.
+  - El ítem "Ver ejemplos…", el `<ExampleGallery>` del menú y el del estado vacío se fusionaron solos. La galería del menú sigue devolviendo el foco con su selector `[data-testid="map-menu"]`, que es el mismo botón que `menuButton`.
+- **`docs/checks.md` (3 hunks)**: se tomó la versión del slice 3; el encabezado y la tabla se reescribieron con la corrida tras el merge.
+- **`docs/ledger.md` (1 hunk)**: se conservan las dos partes. Las secciones del slice 2 ("Merge de `slice-1-editor`" y "Merge de `main` y cambio de base") van antes de las del slice 3, en orden cronológico.
+- Después: sin marcadores de conflicto en el árbol (`git grep`). El resto (`eslint.config.mjs`, `map-canvas.tsx`, `editor.spec.ts`, README, roadmap, REVIEW.md) se fusionó sin conflictos.
+
+### Checks
+
+Desde cero, todo en verde a la primera: install, typecheck, lint, 141 unitarios, build sin variables de entorno y 29 e2e (`E2E_PORT=3140`, uno nuevo del slice 1); greps vacíos; árbol limpio. Ver [checks.md](checks.md); logs en `.check-logs/s3-main/`. La base del PR #4 pasa a `main`.

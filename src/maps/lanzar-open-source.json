@@ -1,0 +1,153 @@
+{
+  "version": 1,
+  "title": "Lanzar un proyecto open source",
+  "summary": "De una idea a un proyecto público que otras personas usan: el plan paso a paso, con sus desvíos.",
+  "nodes": [
+    {
+      "id": "problema",
+      "title": "Un problema concreto",
+      "summary": "Empezar por algo que te molesta a ti y que puedes explicar en una frase.",
+      "details": "- Escribir la frase antes de escribir código.\n- Si no la puedes decir en voz alta en diez segundos, todavía es difusa.",
+      "preview": { "type": "text", "content": "«Quiero ver cómo funciona un sistema sin leer todo el código.»" },
+      "track": "main"
+    },
+    {
+      "id": "mvp",
+      "title": "Versión mínima",
+      "summary": "Lo más chico que resuelve el problema de punta a punta, aunque sea feo.",
+      "details": "- Un solo caso de uso, completo.\n- Sin configuración: funciona con los valores por defecto.\n- Se corta todo lo que \"estaría bueno\".",
+      "preview": { "type": "list", "content": "✓ Caso principal\n✗ Ajustes\n✗ Temas" },
+      "track": "main"
+    },
+    {
+      "id": "licencia",
+      "title": "Licencia y repositorio",
+      "summary": "Repo público con licencia elegida (MIT, Apache 2.0…), .gitignore y CI básico.",
+      "details": "- Sin licencia, legalmente nadie puede usar el código.\n- CI que corre tests y lint en cada PR.\n- Nada privado en el historial: claves, datos, notas internas.",
+      "preview": { "type": "code", "content": "LICENSE  README.md  .github/workflows/ci.yml" },
+      "track": "main"
+    },
+    {
+      "id": "readme",
+      "title": "README que se entiende",
+      "summary": "Qué es, para quién, una imagen y cómo probarlo en menos de un minuto.",
+      "details": "- Primera línea: el problema que resuelve.\n- Un GIF o captura arriba de todo.\n- Instalación en tres comandos como máximo.\n- Cómo contribuir y la licencia, al final.",
+      "preview": { "type": "list", "content": "Qué es\nDemo\nCómo correrlo\nContribuir" },
+      "track": "main"
+    },
+    {
+      "id": "demo",
+      "title": "Demo en vivo",
+      "summary": "Una URL donde se puede probar sin instalar nada.",
+      "details": "- Un hosting estático gratuito alcanza para muchos proyectos.\n- Con datos de ejemplo cargados, no una pantalla vacía.",
+      "preview": { "type": "ui", "content": "[ Probar la demo → ]" },
+      "track": "main"
+    },
+    {
+      "id": "anuncio",
+      "title": "Anuncio",
+      "summary": "Un post corto en dos o tres lugares donde está la gente que tiene el problema.",
+      "details": "- Contar el problema primero y el proyecto después.\n- El GIF del README sirve de imagen.\n- Responder todos los comentarios del primer día.",
+      "preview": { "type": "text", "content": "Hice una herramienta para mapear cualquier sistema…" },
+      "track": "main"
+    },
+    {
+      "id": "issues",
+      "title": "Primeros issues",
+      "summary": "Llegan preguntas, errores y pedidos: se responde rápido y se etiqueta todo.",
+      "details": "- Etiquetas: *bug*, *idea*, *buen primer issue*.\n- Responder en menos de 48 horas, aunque sea \"lo miro esta semana\".\n- Plantillas de issue para pedir pasos y versión.",
+      "preview": { "type": "metric", "content": "12 issues" },
+      "track": "main"
+    },
+    {
+      "id": "ritmo",
+      "title": "Mantener el ritmo",
+      "summary": "Versiones chicas y frecuentes, con notas de cambios que cualquiera entiende.",
+      "details": "- Una versión cada dos o tres semanas.\n- CHANGELOG en lenguaje humano.\n- Un roadmap público para que se sepa qué viene y qué no.",
+      "preview": { "type": "list", "content": "v0.1 visor\nv0.2 editor\nv0.3 compartir" },
+      "track": "main"
+    },
+    {
+      "id": "ya-existe",
+      "title": "Ya existe algo parecido",
+      "summary": "Casi siempre pasa. Se prueba la alternativa y se anota qué hace distinto este proyecto.",
+      "details": "- Si la alternativa resuelve tu problema, úsala y contribuye ahí.\n- Si no, la diferencia es tu frase de presentación.",
+      "track": "branch"
+    },
+    {
+      "id": "diferencial",
+      "title": "Diferencial en una línea",
+      "summary": "Una frase que explica por qué este y no el otro: más simple, sin cuenta, sin backend…",
+      "details": "- Va en la primera línea del README y del anuncio.",
+      "track": "branch"
+    },
+    {
+      "id": "alcance",
+      "title": "El alcance crece",
+      "summary": "Aparecen funciones \"imprescindibles\" y el lanzamiento se aleja; se corta a un solo slice.",
+      "details": "- Las ideas nuevas van a una lista \"después del lanzamiento\".\n- Fecha de lanzamiento fija; lo que no llega, espera.",
+      "track": "branch"
+    },
+    {
+      "id": "dependencias",
+      "title": "Dependencias con otra licencia",
+      "summary": "Una librería con licencia incompatible obliga a cambiarla antes de publicar.",
+      "details": "- Revisar las licencias de las dependencias directas.\n- GPL dentro de un proyecto MIT es la duda más común.",
+      "track": "branch"
+    },
+    {
+      "id": "deploy-falla",
+      "title": "El deploy falla",
+      "summary": "Lo que corre en local no corre en el hosting: variables, versión de Node o rutas.",
+      "details": "- Que el build funcione sin variables de entorno.\n- Un preview por PR detecta el problema antes del lanzamiento.",
+      "preview": { "type": "code", "content": "Error: Cannot find module" },
+      "track": "branch"
+    },
+    {
+      "id": "silencio",
+      "title": "Nadie responde",
+      "summary": "El anuncio pasa sin pena ni gloria. Es lo normal; se mejora el mensaje y se prueba en otro lugar.",
+      "details": "- Escribirle a una persona concreta que tenga el problema.\n- Una demo mejor vale más que un segundo post igual.",
+      "track": "branch"
+    },
+    {
+      "id": "primer-pr",
+      "title": "Primer PR externo",
+      "summary": "Alguien contribuye por primera vez: se revisa con cuidado y se agradece en público.",
+      "details": "- Revisar en pocos días, aunque haya que pedir cambios.\n- Mencionar a la persona en las notas de la versión.",
+      "track": "branch"
+    },
+    {
+      "id": "fuera-de-alcance",
+      "title": "Pedido fuera de alcance",
+      "summary": "Un pedido que no encaja con el proyecto: se dice que no, con el porqué y un enlace al roadmap.",
+      "details": "- Decir que no a tiempo también es mantener.\n- Cerrar el issue con amabilidad; se puede reabrir.",
+      "track": "branch"
+    },
+    {
+      "id": "agotamiento",
+      "title": "Agotamiento",
+      "summary": "Mantener solo cansa. Se anuncia una pausa o se busca a alguien con quien compartirlo.",
+      "details": "- Una pausa anunciada es mejor que un proyecto que parece abandonado.\n- Dar permisos a quien ya contribuye con constancia.",
+      "track": "branch"
+    }
+  ],
+  "edges": [
+    { "from": "problema", "to": "mvp", "type": "main" },
+    { "from": "mvp", "to": "licencia", "type": "main", "label": "funciona" },
+    { "from": "licencia", "to": "readme", "type": "main" },
+    { "from": "readme", "to": "demo", "type": "main" },
+    { "from": "demo", "to": "anuncio", "type": "main", "label": "lanzar" },
+    { "from": "anuncio", "to": "issues", "type": "main" },
+    { "from": "issues", "to": "ritmo", "type": "main" },
+    { "from": "problema", "to": "ya-existe", "type": "branch", "label": "buscar antes" },
+    { "from": "ya-existe", "to": "diferencial", "type": "branch" },
+    { "from": "mvp", "to": "alcance", "type": "edge_case", "label": "una función más" },
+    { "from": "licencia", "to": "dependencias", "type": "edge_case" },
+    { "from": "demo", "to": "deploy-falla", "type": "edge_case", "label": "error en el build" },
+    { "from": "anuncio", "to": "silencio", "type": "edge_case", "label": "0 respuestas" },
+    { "from": "issues", "to": "primer-pr", "type": "branch" },
+    { "from": "issues", "to": "fuera-de-alcance", "type": "edge_case" },
+    { "from": "ritmo", "to": "agotamiento", "type": "edge_case" }
+  ]
+}

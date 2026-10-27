@@ -1,16 +1,47 @@
 # universe
 
-Mapas universales de sistemas: un canvas minimalista de nodos conectados, cada uno con su explicación.
+**Mapea cualquier sistema como un mapa explorable.** Un canvas minimalista de nodos conectados, cada uno con su explicación: el camino principal de izquierda a derecha y las ramas (errores, casos límite) arriba y abajo.
 
-Mapea cualquier sistema (flujos de software, proyectos, vida personal) como un mapa explorable. A la izquierda, un canvas infinito con mini tarjetas conectadas por flechas: el camino principal va de izquierda a derecha y las ramas (errores, casos límite) salen hacia arriba y abajo. A la derecha, el detalle del nodo seleccionado: posición en el camino, explicación, detalles, anterior/siguiente y conexiones.
+Sirve para un flujo de software, el plan de un proyecto o tu semana. Sin IA, sin backend, sin login: todo corre en el navegador y tus mapas se guardan en él. Código abierto (MIT).
 
-Sin IA, sin backend, sin login: todo corre en el navegador. Los mapas se editan a mano y se guardan en este navegador (localStorage).
+**Pruébalo:** https://universe-gamma-eosin.vercel.app
 
-![universe en modo claro](docs/screenshots/desktop-light.png)
+![Demo: abrir un ejemplo de la galería, recorrer nodos, editar y compartir](docs/media/demo.gif)
 
-| Edición | Oscuro | Móvil (360px) |
+## Qué hace
+
+- **Visor**: canvas infinito con zoom, tarjetas con vista previa y flechas tipadas (principal, rama, caso límite). A la derecha, el detalle del nodo: posición en el camino, explicación, detalles, anterior/siguiente y conexiones. Modo claro y oscuro, teclado completo y móvil desde 360 px.
+- **Ejemplos**: cuatro mapas de solo lectura en una galería (selector de mapa → *Ver todos los ejemplos…*, menú `⋯` → *Ver ejemplos…* o el estado vacío): la especificación de esta app, un modal para compartir, *Mi semana* (hábitos) y *Lanzar un proyecto open source* (plan de proyecto).
+- **Editor**: crear, mover, conectar y borrar nodos; panel con validación en vivo; deshacer y rehacer; "Mis mapas" guardados en el navegador.
+- **Compartir, importar y exportar**: un enlace con el mapa comprimido en la URL (no se sube a ningún servidor), JSON de ida y vuelta y PNG del mapa entero.
+
+| Galería de ejemplos | Edición | Móvil (360 px) |
 | --- | --- | --- |
-| ![editor](docs/screenshots/editor-desktop.png) | ![modo oscuro](docs/screenshots/desktop-dark.png) | ![móvil](docs/screenshots/mobile.png) |
+| ![galería de ejemplos](docs/screenshots/gallery-desktop.png) | ![editor](docs/screenshots/editor-desktop.png) | ![galería en móvil](docs/screenshots/gallery-mobile.png) |
+| **Mi semana** | **Compartir** | **Oscuro** |
+| ![ejemplo Mi semana](docs/screenshots/example-mi-semana.png) | ![diálogo de compartir](docs/screenshots/share-dialog.png) | ![modo oscuro](docs/screenshots/desktop-dark.png) |
+
+## Cómo correrlo
+
+Necesitas Node 22 o superior y pnpm.
+
+```bash
+pnpm install
+pnpm dev          # http://localhost:3000
+```
+
+Para desplegar alcanza con la configuración por defecto de Vercel (o cualquier hosting de Next.js): `pnpm build` no necesita variables de entorno y todas las rutas son estáticas.
+
+## Ejemplos
+
+| Mapa | De qué va |
+| --- | --- |
+| universe: el spec | Esta misma app, mapeada con ella: idea, stack y slices. |
+| Share modal | Los estados de un modal para compartir, con sus errores. |
+| Mi semana | Rutinas y hábitos de una semana, y cómo volver cuando se rompen. |
+| Lanzar un proyecto open source | Un plan de proyecto: de la idea al lanzamiento y al mantenimiento. |
+
+Los ejemplos no se modifican nunca: **Editar** crea una copia en "Mis mapas". Están en [`src/maps/`](src/maps/); para sumar uno, añade el JSON y una línea en [`src/maps/index.ts`](src/maps/index.ts) (id, descripción de una línea y el mapa). El test `tests/unit/bundled-maps.test.ts` lo valida con el esquema y comprueba que el layout no superponga tarjetas.
 
 ## Editar
 
@@ -41,15 +72,18 @@ pnpm install
 pnpm dev          # http://localhost:3000
 pnpm build        # build de producción
 pnpm lint
-pnpm typecheck    # tsc --noEmit
-pnpm test         # vitest: esquema, layout y navegación
+pnpm typecheck    # next typegen && tsc --noEmit
+pnpm test         # vitest: esquema, mapas de ejemplo, layout, editor, compartir…
 pnpm exec playwright install chromium   # una vez
-pnpm build && pnpm test:e2e   # playwright: smoke del visor y del editor (usa el build de producción)
-E2E_PORT=3120 pnpm test:e2e   # si el puerto 3100 está ocupado
+pnpm build && pnpm test:e2e   # playwright sobre el build de producción (puerto 3100)
+E2E_PORT=3140 pnpm test:e2e   # si el puerto 3100 está ocupado
 UPDATE_SCREENSHOTS=1 pnpm test:e2e   # regenera docs/screenshots (sin la variable, van a test-results/)
+pnpm build && pnpm demo:gif   # graba docs/media/demo.gif (Playwright + ffmpeg; DEMO_PORT, 3140 por defecto)
 ```
 
 Teclado: Tab recorre "Saltar al detalle", el selector de mapa, el menú del mapa, Compartir, Ver/Editar y el tema, y luego los nodos del canvas (con anillo de foco); Enter o Espacio abren el nodo en el detalle. En modo edición: flechas mueven el nodo enfocado (Shift para pasos largos), Suprimir lo borra, Enter sobre una flecha la abre en el panel, y ⌘Z / ⇧⌘Z deshacen y rehacen fuera de los campos de texto.
+
+Lanzamiento: metadatos Open Graph y Twitter con una imagen generada en el build (`src/app/opengraph-image.tsx`, `next/og`), favicon e iconos (`src/app/icon.svg`, `apple-icon.tsx`) y una página 404 en español (`src/app/not-found.tsx`).
 
 Stack: Next.js (App Router) + TypeScript estricto, shadcn/ui + Tailwind 4, `next-themes`, `@xyflow/react` + React Flow UI, dagre, zustand, Zod, `lz-string` (enlaces) y `html-to-image` (PNG).
 
