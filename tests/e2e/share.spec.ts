@@ -90,7 +90,9 @@ test.describe("share, import and export (desktop)", () => {
     expect(url).toMatch(/\/#m=[A-Za-z0-9+\-$]+$/);
     expect(await page.evaluate(() => navigator.clipboard.readText())).toBe(url);
     await expect(dialog.getByTestId("share-long")).toHaveCount(0);
-    await page.screenshot({ path: `${SHOTS}/share-dialog.png` });
+    // Never versioned from here: the link says localhost. docs/screenshots/share-dialog.png comes
+    // from `pnpm demo:gif`, which serves the build at the production origin.
+    await page.screenshot({ path: "test-results/screenshots/share-dialog.png" });
     await page.keyboard.press("Escape");
     await expect(page.getByRole("button", { name: "Compartir" })).toBeFocused();
 
@@ -108,6 +110,7 @@ test.describe("share, import and export (desktop)", () => {
     expect(await json(await downloadOf(other, "Exportar JSON"))).toEqual(source);
     // Opening a link saves nothing.
     expect((await stored(other))?.state.userMaps ?? []).toEqual([]);
+    await expect(other.getByRole("menu")).toHaveCount(0); // the export menu, mid-close otherwise
     await other.screenshot({ path: `${SHOTS}/share-open-link.png` });
 
     await other.getByTestId("save-shared").click();
@@ -214,7 +217,8 @@ test.describe("share, import and export (desktop)", () => {
     await expect(list).toContainText("nodes.0.summary: El resumen no puede superar 140 caracteres");
     await expect(list).toContainText("nodes.1.track:");
     await expect(dialog.getByLabel("O pega el JSON")).toHaveAttribute("aria-invalid", "false");
-    await page.screenshot({ path: `${SHOTS}/import-errors.png` });
+    // The menu fades out while the dialog fades in: capture both at their end state.
+    await page.screenshot({ path: `${SHOTS}/import-errors.png`, animations: "disabled" });
 
     // Broken pasted JSON.
     await dialog.getByLabel("O pega el JSON").fill('{ "version": 1,, }');
