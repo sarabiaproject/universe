@@ -380,3 +380,7 @@ Rama desde `origin/main` (`acff2f2`, con el PR #4 ya mergeado y en producción).
 ### Checks
 
 Desde cero: install, typecheck, lint, 141 unitarios, build sin variables de entorno y 29 e2e en verde a la primera. Además, el test antes flaky 10/10 y 50/50, y 5 corridas completas más. Greps vacíos (también `localhost` en `src` y README) y árbol limpio. Ver [checks.md](checks.md); logs en `.check-logs/polish/`.
+
+### Reporte final
+
+- **PR**: https://github.com/sarabiaproject/universe/pull/5 (`polish-launch` → `main`). Sin merge, sin push a `main`, sin deploy ni comandos `vercel`; no se tocó el puerto 3100 ni `~/dev/universe-private`.
