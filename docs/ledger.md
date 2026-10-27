@@ -344,3 +344,39 @@ El PR #3 ya se mergeó a `main` (`7101cce`). Se mergeó `origin/main` en `slice-
 ### Checks
 
 Desde cero, todo en verde a la primera: install, typecheck, lint, 141 unitarios, build sin variables de entorno y 29 e2e (`E2E_PORT=3140`, uno nuevo del slice 1); greps vacíos; árbol limpio. Ver [checks.md](checks.md); logs en `.check-logs/s3-main/`. La base del PR #4 pasa a `main`.
+
+## 2026-10-27: Pulido post-lanzamiento (rama `polish-launch`)
+
+Rama desde `origin/main` (`acff2f2`, con el PR #4 ya mergeado y en producción).
+
+### Qué se hizo
+
+- **Test flaky del slice 1, causa raíz.** `editor.spec.ts › keyboard: create, move, delete and undo without a mouse` fallaba en pasos distintos.
+  - Diagnóstico: un spec temporal registró los `focusin` con su tiempo. En cada fallo, entre 6 y 150 ms después de `second.focus()` (o de enfocar "Añadir nodo"), el foco saltaba a `BUTTON#map-menu`.
+  - Causa: el menú `⋯` (Radix) termina su animación de salida, se desmonta, y entonces `FocusScope` devuelve el foco a su botón en un `setTimeout` (`@radix-ui/react-focus-scope`, al desmontar). El helper `newMap` solo esperaba al estado vacío y seguía. Si el test enfocaba algo antes de ese último paso, el siguiente Enter, flecha o Suprimir caía sobre el botón del menú.
+  - En la app es el comportamiento esperado: el foco vuelve al disparador del menú.
+  - Arreglo en los tests: `tests/e2e/helpers.ts › newMapFromMenu` espera a que el menú se desmonte y a que su botón tenga el foco. Es una condición real, no un timeout.
+  - Se usa en `editor.spec.ts` (el helper `newMap` y el test de almacenamiento bloqueado), en `share.spec.ts` (`buildMap` y el enlace pegado) y en `launch.spec.ts` (estado vacío).
+  - Antes: 3 de 20 fallaban. Después: 50/50 con `--repeat-each`, 10/10 invocaciones seguidas y 6 corridas completas en verde.
+- **O3, negritas en la imagen social.** `next/og` solo trae una fuente regular, así que `fontWeight` no hacía nada.
+  - `src/lib/og-image.tsx` carga Geist 400, 600 y 700 (TTF del paquete `geist`, OFL) una vez al cargar el módulo. Así lo pide la doc de Next 16 ("Predictable values").
+  - Con una lectura `async` dentro de la función, la ruta pasaba a dinámica (ƒ) por Cache Components. Con la lectura a nivel de módulo sigue estática (○).
+  - El ancho de las tarjetas pasó de 190 a 206 px: en seminegrita "El alcance crece" partía en dos líneas.
+- **O1, sin `localhost` en los assets ni en el README.**
+  - `pnpm demo:gif` abre la app en `DEMO_ORIGIN` (producción por defecto) y responde con `context.route` todas las peticiones a ese origen desde el build local. Lo grabado es este build, y el enlace de "Compartir" lleva la URL pública. El script falla si el enlace no empieza por ese origen.
+  - El script también genera `docs/screenshots/share-dialog.png`. El e2e ya no la versiona (la deja en `test-results/`).
+  - En el README, `# http://localhost:3000` pasó a "servidor de desarrollo en el puerto 3000".
+- **De paso:**
+  - O5: el GIF pulsa "Centrar en el canvas" antes de editar, así la edición se ve al 75% y no al 28%.
+  - `share-open-link.png` e `import-errors.png` salían con el menú a medio cerrar o el diálogo a medio abrir (ya pasaba antes). Ahora esperan al menú o usan `animations: "disabled"`.
+  - El GIF pasó a 800 px para quedar lejos del límite (2,81 MB).
+
+### Decisiones
+
+- **Grabar el build local con el origen de producción**, en lugar de grabar contra producción. Así lo grabado corresponde al código de la rama (no a lo que esté desplegado) y no depende de la red. La URL que se ve es real: es donde vive la app. Se puede grabar contra otro origen con `DEMO_ORIGIN`.
+- **`geist` como dependencia** y no TTF copiados al repo: misma licencia OFL, versión fijada en el lockfile, y la imagen se genera en el build.
+- **El flaky se arregló en los tests, no en la app**: devolver el foco al botón del menú es lo correcto para quien usa teclado.
+
+### Checks
+
+Desde cero: install, typecheck, lint, 141 unitarios, build sin variables de entorno y 29 e2e en verde a la primera. Además, el test antes flaky 10/10 y 50/50, y 5 corridas completas más. Greps vacíos (también `localhost` en `src` y README) y árbol limpio. Ver [checks.md](checks.md); logs en `.check-logs/polish/`.
