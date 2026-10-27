@@ -2,7 +2,10 @@ import { readFile } from "node:fs/promises";
 import { inflateSync } from "node:zlib";
 
 import { expect, test, type Download, type Page } from "@playwright/test";
+
 import LZString from "lz-string";
+
+import { newMapFromMenu } from "./helpers";
 
 // Versioned screenshots are only rewritten on purpose: `UPDATE_SCREENSHOTS=1 pnpm test:e2e`.
 const SHOTS = process.env.UPDATE_SCREENSHOTS === "1" ? "docs/screenshots" : "test-results/screenshots";
@@ -55,7 +58,7 @@ function readPng(buffer: Buffer) {
 async function buildMap(page: Page, title: string) {
   await page.goto("/");
   await node(page, "problema").waitFor();
-  await menu(page, "Nuevo mapa");
+  await newMapFromMenu(page);
   await page.getByTestId("create-first-node").click();
   await page.getByTestId("field-title").fill("Inicio «ñ» 🚀");
   await page.getByTestId("field-summary").fill("Acentos, emoji y #?&= en la URL");
@@ -87,7 +90,9 @@ test.describe("share, import and export (desktop)", () => {
     expect(url).toMatch(/\/#m=[A-Za-z0-9+\-$]+$/);
     expect(await page.evaluate(() => navigator.clipboard.readText())).toBe(url);
     await expect(dialog.getByTestId("share-long")).toHaveCount(0);
-    await page.screenshot({ path: `${SHOTS}/share-dialog.png` });
+    // Never versioned from here: the link says localhost. docs/screenshots/share-dialog.png comes
+    // from `pnpm demo:gif`, which serves the build at the production origin.
+    await page.screenshot({ path: "test-results/screenshots/share-dialog.png" });
     await page.keyboard.press("Escape");
     await expect(page.getByRole("button", { name: "Compartir" })).toBeFocused();
 
@@ -105,6 +110,7 @@ test.describe("share, import and export (desktop)", () => {
     expect(await json(await downloadOf(other, "Exportar JSON"))).toEqual(source);
     // Opening a link saves nothing.
     expect((await stored(other))?.state.userMaps ?? []).toEqual([]);
+    await expect(other.getByRole("menu")).toHaveCount(0); // the export menu, mid-close otherwise
     await other.screenshot({ path: `${SHOTS}/share-open-link.png` });
 
     await other.getByTestId("save-shared").click();
@@ -155,7 +161,7 @@ test.describe("share, import and export (desktop)", () => {
     await page.getByRole("button", { name: "Compartir" }).click();
     const url = await page.getByTestId("share-url").inputValue();
     await page.keyboard.press("Escape");
-    await menu(page, "Nuevo mapa");
+    await newMapFromMenu(page);
     await page.evaluate((hash) => (window.location.hash = hash), new URL(url).hash);
     await expect(page.getByTestId("shared-banner")).toBeVisible();
     expect(await json(await downloadOf(page, "Exportar JSON"))).toEqual(source);
@@ -211,7 +217,8 @@ test.describe("share, import and export (desktop)", () => {
     await expect(list).toContainText("nodes.0.summary: El resumen no puede superar 140 caracteres");
     await expect(list).toContainText("nodes.1.track:");
     await expect(dialog.getByLabel("O pega el JSON")).toHaveAttribute("aria-invalid", "false");
-    await page.screenshot({ path: `${SHOTS}/import-errors.png` });
+    // The menu fades out while the dialog fades in: capture both at their end state.
+    await page.screenshot({ path: `${SHOTS}/import-errors.png`, animations: "disabled" });
 
     // Broken pasted JSON.
     await dialog.getByLabel("O pega el JSON").fill('{ "version": 1,, }');

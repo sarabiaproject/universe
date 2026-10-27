@@ -1,19 +1,29 @@
 # Checks
 
-Último registro: 2026-10-26, rama `slice-3-launch` tras mergear `origin/main` (`7101cce`, con los slices 1 y 2 ya mergeados), macOS (arm64), Node v26.7.0, pnpm 11.22.0. Ejecutado desde cero (`rm -rf node_modules .next test-results`), en este orden. El build corrió con `env -i HOME PATH` (sin variables de entorno). Logs en `.check-logs/s3-main/` (ignorado por git).
+Último registro: 2026-10-27, rama `polish-launch` (pulido post-lanzamiento, desde `main` = `acff2f2`), macOS (arm64), Node v26.7.0, pnpm 11.22.0. Ejecutado desde cero (`rm -rf node_modules .next test-results`), en este orden. El build corrió con `env -i HOME PATH` (sin variables de entorno). Logs en `.check-logs/polish/` (ignorado por git).
 
 | # | Comando | Resultado |
 | --- | --- | --- |
-| 0 | `pnpm install --frozen-lockfile` | ✅ exit 0 |
+| 0 | `pnpm install --frozen-lockfile` | ✅ exit 0 (nueva dependencia: `geist` 1.8.2, para las fuentes de la imagen OG) |
 | 1 | `pnpm typecheck` | ✅ exit 0 |
 | 2 | `pnpm lint` | ✅ exit 0 |
 | 3 | `pnpm test` | ✅ 12 archivos, 141 tests |
-| 4 | `env -i HOME="$HOME" PATH="$PATH" pnpm build` | ✅ exit 0, las 6 rutas estáticas |
-| 5 | `E2E_PORT=3140 pnpm test:e2e` | ✅ 29 pasan en la primera corrida (28 de antes + "deleting a node from the Sheet keeps focus inside the Sheet (D1-r2)", que llega del slice 1 con el merge) |
-| 6 | Greps de REVIEW.md (colores, `any`/`@ts-ignore`/`eslint-disable`) y `localhost` en `src` | ✅ sin resultados |
+| 4 | `env -i HOME="$HOME" PATH="$PATH" pnpm build` | ✅ exit 0, las 6 rutas estáticas (también `/opengraph-image` y `/twitter-image`, ahora con fuentes) |
+| 5 | `E2E_PORT=3140 pnpm test:e2e` | ✅ 29 pasan en la primera corrida |
+| 6 | Greps de REVIEW.md (colores, `any`/`@ts-ignore`/`eslint-disable`) y `localhost` en `src` y `README.md` | ✅ sin resultados |
 | 7 | `git status --short` después de los checks | ✅ vacío |
+| 8 | Test antes flaky, 10 invocaciones seguidas: `E2E_PORT=3140 pnpm test:e2e tests/e2e/editor.spec.ts -g "keyboard: create, move"` | ✅ 10/10 |
+| 9 | El mismo test con `--repeat-each=50` | ✅ 50/50 (antes del arreglo: 3 de 20 fallaban sobre el mismo código de `main`) |
+| 10 | `E2E_PORT=3140 pnpm test:e2e`, 5 corridas completas más | ✅ 5 × 29 pasan |
+| 11 | `pnpm demo:gif` | ✅ `docs/media/demo.gif` de 2 810 063 bytes (< 3 MB), 22,8 s, 800 px. `docs/screenshots/share-dialog.png` con el enlace `https://universe-gamma-eosin.vercel.app/#m=…`; el script falla si el enlace no empieza por ese origen |
 
-## Corrida anterior: fixes de la revisión ronda 1 (B1, D1)
+Revisado a ojo: el PNG de `/opengraph-image` (idéntico a `/twitter-image`, con "universe" en Geist 700 y los títulos de las tarjetas en 600), los fotogramas del GIF (galería, nodos al 75%, edición al 75% y diálogo de compartir con la URL de producción), `share-dialog.png`, `share-open-link.png` e `import-errors.png`.
+
+## Corridas anteriores
+
+Tras mergear `main` en `slice-3-launch`: todo en verde, 29 e2e (logs en `.check-logs/s3-main/`).
+
+### Fixes de la revisión ronda 1 (B1, D1)
 
 Mismos pasos, logs en `.check-logs/s3-fix-r1/`: todo en verde, con 141 unitarios y 28 e2e a la primera.
 
@@ -36,13 +46,9 @@ Mismos pasos, logs en `.check-logs/s3-fix-r1/`: todo en verde, con 141 unitarios
 
 El puerto 3100 lo usa otro servicio y 3110/3120/3130 otras sesiones: el e2e corrió con `E2E_PORT=3140`. Chromium de Playwright: la caché global ya tenía la revisión que pide Playwright 1.64.
 
-### Flaky conocido (no es de este slice)
+### Flaky de `keyboard: create, move, delete and undo` (resuelto en `polish-launch`)
 
-`editor.spec.ts › keyboard: create, move, delete and undo without a mouse` falla de forma intermitente: en distintos pasos (`toHaveValue("Nuevo nodo")`, el `outlineStyle`, la posición tras las flechas o `toHaveCount(1)` tras Suprimir).
-
-- Medido con `--repeat-each=15` sobre esta rama: 3 de 15 fallan.
-- Medido igual sobre la base `460082d` (`slice-2-share`, sin los cambios del slice 3, en un worktree temporal): 4 de 15 fallan. Es previo y no lo causa este PR.
-- Los commits nuevos de `slice-1-editor` (ronda 2) no tocan ese test. No se cambió aquí para no pisar la sesión del slice 1. Queda anotado en el ledger como seguimiento.
+Fallaba en 3 a 4 de cada 15 a 20 repeticiones, en pasos distintos. La causa está en el ledger (2026-10-27). Tras el arreglo: 10/10 invocaciones, 50/50 con `--repeat-each` y 6 corridas completas sin fallos.
 
 ## Salida
 
@@ -61,9 +67,9 @@ Route (app)
 ├ ○ /opengraph-image
 └ ○ /twitter-image
 
-$ playwright test        # tras el merge de main
+$ playwright test
 [WebServer] $ next start --port 3140
-  29 passed (16.0s)
+  29 passed (13.5s)
 ```
 
 ## Qué cubre cada test

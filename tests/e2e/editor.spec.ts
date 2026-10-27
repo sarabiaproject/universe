@@ -1,5 +1,7 @@
 import { expect, test, type Page } from "@playwright/test";
 
+import { newMapFromMenu } from "./helpers";
+
 // Versioned screenshots are only rewritten on purpose: `UPDATE_SCREENSHOTS=1 pnpm test:e2e`.
 const SHOTS = process.env.UPDATE_SCREENSHOTS === "1" ? "docs/screenshots" : "test-results/screenshots";
 
@@ -22,9 +24,7 @@ const title = (page: Page) => page.getByTestId("field-title");
 async function newMap(page: Page) {
   await page.goto("/");
   await node(page, "problema").waitFor();
-  await page.getByRole("button", { name: "Acciones del mapa" }).click();
-  await page.getByRole("menuitem", { name: "Nuevo mapa" }).click();
-  await expect(page.getByTestId("empty-state")).toBeVisible();
+  await newMapFromMenu(page);
 }
 
 async function fit(page: Page) {
@@ -351,8 +351,7 @@ test.describe("editor (desktop, round 1 fixes)", () => {
     await expect(page.getByText("Algo salió mal")).toHaveCount(0);
     await expect(page.getByTestId("storage-warning")).toContainText("no se guardarán");
 
-    await page.getByRole("button", { name: "Acciones del mapa" }).click();
-    await page.getByRole("menuitem", { name: "Nuevo mapa" }).click();
+    await newMapFromMenu(page);
     await page.getByTestId("create-first-node").click();
     await expect(page.locator(".react-flow__node")).toHaveCount(1);
     await page.getByRole("button", { name: "Cerrar aviso" }).click();

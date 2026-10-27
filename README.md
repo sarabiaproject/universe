@@ -27,7 +27,7 @@ Necesitas Node 22 o superior y pnpm.
 
 ```bash
 pnpm install
-pnpm dev          # http://localhost:3000
+pnpm dev          # servidor de desarrollo en el puerto 3000
 ```
 
 Para desplegar alcanza con la configuración por defecto de Vercel (o cualquier hosting de Next.js): `pnpm build` no necesita variables de entorno y todas las rutas son estáticas.
@@ -69,7 +69,7 @@ Los ejemplos no se modifican nunca: **Editar** crea una copia en "Mis mapas". Es
 
 ```bash
 pnpm install
-pnpm dev          # http://localhost:3000
+pnpm dev          # servidor de desarrollo en el puerto 3000
 pnpm build        # build de producción
 pnpm lint
 pnpm typecheck    # next typegen && tsc --noEmit

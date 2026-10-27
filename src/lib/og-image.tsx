@@ -1,3 +1,6 @@
+import { readFile } from "node:fs/promises";
+import { join } from "node:path";
+
 import { ImageResponse } from "next/og";
 
 /*
@@ -7,10 +10,27 @@ import { ImageResponse } from "next/og";
  * gainsboro ≈ --border and royalblue ≈ --highlight.
  */
 
+// next/og only bundles one regular font, so `fontWeight` did nothing (review slice 3, O3).
+// Geist (the app's font, OFL, from the `geist` package) in the three weights used here.
+// Read once at module scope: it doesn't depend on the request, so the images stay static.
+const GEIST = join(process.cwd(), "node_modules/geist/dist/fonts/geist-sans");
+const FONTS = await Promise.all(
+  ([
+    [400, "Geist-Regular.ttf"],
+    [600, "Geist-SemiBold.ttf"],
+    [700, "Geist-Bold.ttf"],
+  ] as const).map(async ([weight, file]) => ({
+    name: "Geist",
+    data: await readFile(join(GEIST, file)),
+    weight,
+    style: "normal" as const,
+  })),
+);
+
 export const OG_SIZE = { width: 1200, height: 630 };
 export const OG_ALT = "universe: un mapa de nodos conectados, cada uno con su explicación.";
 
-const CARD = { width: 190, height: 92 };
+const CARD = { width: 206, height: 92 };
 const ROW_Y = 330;
 const COLUMNS = [64, 304, 544, 784];
 const STEPS = [
@@ -55,7 +75,7 @@ export function renderOgImage() {
           display: "flex",
           position: "relative",
           background: "white",
-          fontFamily: "sans-serif",
+          fontFamily: "Geist",
         }}
       >
         <div style={{ position: "absolute", left: 64, top: 64, display: "flex", flexDirection: "column", gap: 14 }}>
@@ -109,6 +129,6 @@ export function renderOgImage() {
         <Card x={COLUMNS[3]} y={ROW_Y + CARD.height + 52} title="Nadie responde" summary="Probar en otro lugar." />
       </div>
     ),
-    OG_SIZE,
+    { ...OG_SIZE, fonts: FONTS },
   );
 }
