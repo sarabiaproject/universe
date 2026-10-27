@@ -2,7 +2,10 @@ import { readFile } from "node:fs/promises";
 import { inflateSync } from "node:zlib";
 
 import { expect, test, type Download, type Page } from "@playwright/test";
+
 import LZString from "lz-string";
+
+import { newMapFromMenu } from "./helpers";
 
 // Versioned screenshots are only rewritten on purpose: `UPDATE_SCREENSHOTS=1 pnpm test:e2e`.
 const SHOTS = process.env.UPDATE_SCREENSHOTS === "1" ? "docs/screenshots" : "test-results/screenshots";
@@ -55,7 +58,7 @@ function readPng(buffer: Buffer) {
 async function buildMap(page: Page, title: string) {
   await page.goto("/");
   await node(page, "problema").waitFor();
-  await menu(page, "Nuevo mapa");
+  await newMapFromMenu(page);
   await page.getByTestId("create-first-node").click();
   await page.getByTestId("field-title").fill("Inicio «ñ» 🚀");
   await page.getByTestId("field-summary").fill("Acentos, emoji y #?&= en la URL");
@@ -155,7 +158,7 @@ test.describe("share, import and export (desktop)", () => {
     await page.getByRole("button", { name: "Compartir" }).click();
     const url = await page.getByTestId("share-url").inputValue();
     await page.keyboard.press("Escape");
-    await menu(page, "Nuevo mapa");
+    await newMapFromMenu(page);
     await page.evaluate((hash) => (window.location.hash = hash), new URL(url).hash);
     await expect(page.getByTestId("shared-banner")).toBeVisible();
     expect(await json(await downloadOf(page, "Exportar JSON"))).toEqual(source);

@@ -2,6 +2,7 @@ import { expect, test, type Page } from "@playwright/test";
 
 import { getMainPath } from "../../src/lib/graph";
 import { BUNDLED_MAPS } from "../../src/maps";
+import { newMapFromMenu } from "./helpers";
 
 // Versioned screenshots are only rewritten on purpose: `UPDATE_SCREENSHOTS=1 pnpm test:e2e`.
 const SHOTS = process.env.UPDATE_SCREENSHOTS === "1" ? "docs/screenshots" : "test-results/screenshots";
@@ -179,12 +180,9 @@ test.describe("examples gallery (desktop)", () => {
     const errors = trackErrors(page);
     await page.goto("/");
     await settle(page);
-    await page.getByTestId("map-menu").click();
-    await page.getByRole("menuitem", { name: "Nuevo mapa" }).click();
-    await expect(page.getByTestId("empty-state")).toBeVisible();
+    await newMapFromMenu(page);
     const open = page.getByTestId("open-gallery-from-empty");
     await expect(open).toHaveText("O abre un ejemplo");
-    await expect(page.getByRole("menu")).toBeHidden();
     await page.screenshot({ path: `${SHOTS}/empty-with-examples.png` });
 
     // Escape comes back to the button that opened it.
